@@ -1,7 +1,19 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
+-- --- DATABASE DES JEUX POUR LA DÉTECTION ---
+local GameNames = {
+    [2753915549] = "Blox Fruits (Sea 1)",
+    [4442272183] = "Blox Fruits (Sea 2)",
+    [7449925032] = "Blox Fruits (Sea 3)",
+    [4924144111] = "Brookhaven RP",
+    [8737899170] = "Pet Simulator 99",
+    [155615604] = "Prison Life"
+}
+
+local CurrentGame = GameNames[game.PlaceId] or "Universal Mode"
+
 local Window = Rayfield:CreateWindow({
-   Name = "ktl5 Ultimate Hub",
+   Name = "ktl5 Ultimate Hub | " .. CurrentGame,
    LoadingTitle = "Initializing Hub...",
    LoadingSubtitle = "by ktl5",
    ConfigurationSaving = {
@@ -18,30 +30,32 @@ local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
+local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local Camera = workspace.CurrentCamera
 
 -- --- GLOBAL VARIABLES ---
 _G.TPWalkEnabled = false
-_G.TPWalkSpeed = 2
+_G.TPWalkSpeed = 0.5 -- Valeur par défaut plus basse
 _G.AimLock_Enabled = false
 _G.AimLock_Smoothness = 0.5
 _G.ClickTP_Enabled = false
 _G.InfJump = false
 _G.Noclip = false
 _G.ESP_Enabled = false
+_G.AntiAFK = false
 
 -- --- TABS ---
 local TabMain = Window:CreateTab("Universal", 4483362458)
 local TabVisuals = Window:CreateTab("Visuals", 4483362458)
 local TabWorld = Window:CreateTab("Tools", 4483362458)
+local TabSettings = Window:CreateTab("Settings", 4483362458)
 
 -- --- UTILITY FUNCTIONS ---
 local function GetClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = math.huge
-
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local hum = player.Character:FindFirstChildOfClass("Humanoid")
@@ -61,7 +75,7 @@ local function GetClosestPlayer()
     return closestPlayer
 end
 
--- --- MAIN TAB ---
+-- --- MAIN TAB (Combat & Movement) ---
 TabMain:CreateSection("Combat (Mouse Aim)")
 
 local AimToggle = TabMain:CreateToggle({
@@ -85,7 +99,7 @@ TabMain:CreateSection("Movement")
 
 TabMain:CreateSlider({
    Name = "WalkSpeed",
-   Range = {16, 100},
+   Range = {16, 250},
    Increment = 1,
    Suffix = " Studs",
    CurrentValue = 16,
@@ -96,6 +110,21 @@ TabMain:CreateSlider({
    end,
 })
 
+TabMain:CreateSlider({
+   Name = "JumpPower",
+   Range = {50, 500},
+   Increment = 5,
+   Suffix = " Power",
+   CurrentValue = 50,
+   Callback = function(Value)
+       if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+           LocalPlayer.Character.Humanoid.JumpPower = Value
+       end
+   end,
+})
+
+TabMain:CreateSection("TP Walk (Very Smooth)")
+
 TabMain:CreateToggle({
    Name = "Enable TP Walk",
    CurrentValue = false,
@@ -103,10 +132,10 @@ TabMain:CreateToggle({
 })
 
 TabMain:CreateSlider({
-   Name = "TP Walk Power",
-   Range = {1, 10},
-   Increment = 0.5,
-   CurrentValue = 2,
+   Name = "TP Walk Speed",
+   Range = {0.1, 5}, -- Gamme réduite pour plus de précision
+   Increment = 0.1, -- Incrément plus petit pour un réglage fin
+   CurrentValue = 0.5,
    Callback = function(Value) _G.TPWalkSpeed = Value end,
 })
 
@@ -134,7 +163,7 @@ TabMain:CreateToggle({
 TabVisuals:CreateSection("Player ESP")
 
 TabVisuals:CreateToggle({
-   Name = "Visual ESP",
+   Name = "Visual ESP (Highlights)",
    CurrentValue = false,
    Callback = function(Value)
        _G.ESP_Enabled = Value
@@ -144,6 +173,7 @@ TabVisuals:CreateToggle({
                    if player ~= LocalPlayer and player.Character then
                        local highlight = player.Character:FindFirstChild("Highlight") or Instance.new("Highlight", player.Character)
                        highlight.FillTransparency = 0.5
+                       highlight.OutlineTransparency = 0
                        highlight.FillColor = Color3.fromRGB(0, 255, 150)
                    end
                end
@@ -169,12 +199,9 @@ TabVisuals:CreateToggle({
    end,
 })
 
--- --- TOOLS TAB ---
-TabWorld:CreateSection("KTL Utility Tools")
-
-TabWorld:CreateSlider({
+TabVisuals:CreateSlider({
    Name = "Field Of View (FOV)",
-   Range = {30, 120},
+   Range = {70,120},
    Increment = 1,
    CurrentValue = 70,
    Callback = function(Value)
@@ -182,20 +209,20 @@ TabWorld:CreateSlider({
    end,
 })
 
+-- --- TOOLS TAB ---
+TabWorld:CreateSection("Server Utilities")
+
 TabWorld:CreateButton({
    Name = "Server Hop",
    Callback = function()
        local Http = game:GetService("HttpService")
        local Api = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-       local function NextServer()
-           local servers = Http:JSONDecode(game:HttpGet(Api)).data
-           for _, s in pairs(servers) do
-               if s.playing < s.maxPlayers and s.id ~= game.JobId then
-                   TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
-               end
+       local servers = Http:JSONDecode(game:HttpGet(Api)).data
+       for _, s in pairs(servers) do
+           if s.playing < s.maxPlayers and s.id ~= game.JobId then
+               TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
            end
        end
-       NextServer()
    end,
 })
 
@@ -204,6 +231,14 @@ TabWorld:CreateButton({
    Callback = function()
        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
    end,
+})
+
+TabWorld:CreateSection("World Physics")
+
+TabWorld:CreateToggle({
+   Name = "Anti-AFK",
+   CurrentValue = false,
+   Callback = function(Value) _G.AntiAFK = Value end,
 })
 
 TabWorld:CreateSection("External Scripts")
@@ -223,9 +258,26 @@ TabWorld:CreateButton({
    Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Omegascriptes/French-Voice/refs/heads/main/FrenchVoice.txt"))() end,
 })
 
+-- --- SETTINGS TAB ---
+TabSettings:CreateSection("Hub Settings")
+
+TabSettings:CreateButton({
+   Name = "Unload Hub",
+   Callback = function() Rayfield:Destroy() end,
+})
+
 -- --- LOGIC LOOPS ---
 
+-- Anti-AFK
+LocalPlayer.Idled:Connect(function()
+    if _G.AntiAFK then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end
+end)
+
 RunService.RenderStepped:Connect(function()
+    -- AimLock Logic
     if _G.AimLock_Enabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
         local target = GetClosestPlayer()
         if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
@@ -239,10 +291,12 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
+    -- TP Walk Logic (MODIFIÉ POUR ÊTRE PLUS LENT)
     if _G.TPWalkEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if hum and hum.MoveDirection.Magnitude > 0 then
-            LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame + (hum.MoveDirection * _G.TPWalkSpeed / 2)
+            -- On multiplie par 0.1 pour que même à 1 ou 2 sur le slider, ce soit très contrôlable
+            LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame + (hum.MoveDirection * _G.TPWalkSpeed * 0.1)
         end
     end
 end)
@@ -253,10 +307,6 @@ UserInputService.InputBegan:Connect(function(input, gp)
         _G.AimLock_Enabled = not _G.AimLock_Enabled
         AimToggle:Set(_G.AimLock_Enabled)
     end
-end)
-
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
     if _G.ClickTP_Enabled and input.UserInputType == Enum.UserInputType.MouseButton1 and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
         if LocalPlayer.Character then
             LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p + Vector3.new(0, 3, 0))
@@ -278,8 +328,12 @@ RunService.Stepped:Connect(function()
     end
 end)
 
+Rayfield:LoadConfiguration()
+
+-- --- NOTIFICATION DE DÉMARRAGE AVEC DÉTECTION ---
 Rayfield:Notify({
-   Title = "ktl5 Hub Loaded",
-   Content = "Welcome back, ktl5! New tools added.",
-   Duration = 5,
+   Title = "Game Detected!",
+   Content = "Current Game: " .. CurrentGame .. ". TP Walk Optimisé.",
+   Duration = 6.5,
+   Image = 4483362458,
 })
