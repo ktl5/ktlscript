@@ -1,0 +1,246 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "MM2 Ultimate Hub",
+   LoadingTitle = "Initialisation du Hub...",
+   LoadingSubtitle = "par Gemini",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "MM2_Scripts",
+      FileName = "MainConfig"
+   },
+   KeySystem = false
+})
+
+-- --- SERVICES ---
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local Camera = workspace.CurrentCamera
+
+-- --- VARIABLES GLOBALES ---
+_G.TPWalkEnabled = false
+_G.TPWalkSpeed = 2
+_G.AimLock_Enabled = false
+_G.AimLock_Smoothness = 5 -- Plus c'est bas, plus c'est rapide
+
+-- --- ONGLETS ---
+local TabMain = Window:CreateTab("Universal", 4483362458)
+local TabVisuals = Window:CreateTab("Visuals", 4483362458)
+local TabWorld = Window:CreateTab("Tools", 4483362458)
+
+-- --- FONCTIONS UTILES ---
+local function GetClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+            if onScreen then
+                local distance = (Vector2.new(pos.X, pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+                if distance < shortestDistance then
+                    closestPlayer = player
+                    shortestDistance = distance
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+-- --- ONGLET PRINCIPAL ---
+TabMain:CreateSection("Combat (Aim)")
+
+TabMain:CreateToggle({
+   Name = "Aim Lock (Auto-Visée)",
+   CurrentValue = false,
+   Flag = "AimLockToggle",
+   Callback = function(Value) _G.AimLock_Enabled = Value end,
+})
+
+TabMain:CreateSlider({
+   Name = "Fluidité de visée (Smoothness)",
+   Range = {1, 20},
+   Increment = 1,
+   Suffix = " Level",
+   CurrentValue = 5,
+   Flag = "AimSmooth",
+   Callback = function(Value) _G.AimLock_Smoothness = Value end,
+})
+
+TabMain:CreateSection("Vision")
+
+TabMain:CreateSlider({
+   Name = "Champ de vision (FOV)",
+   Range = {70, 120},
+   Increment = 1,
+   Suffix = " °",
+   CurrentValue = 70,
+   Flag = "FOV_Slider",
+   Callback = function(Value) Camera.FieldOfView = Value end,
+})
+
+TabMain:CreateSection("Mouvement")
+
+TabMain:CreateSlider({
+   Name = "Vitesse (WalkSpeed)",
+   Range = {16, 100},
+   Increment = 1,
+   Suffix = " Studs",
+   CurrentValue = 16,
+   Flag = "SpeedSlider",
+   Callback = function(Value)
+       if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+           LocalPlayer.Character.Humanoid.WalkSpeed = Value
+       end
+   end,
+})
+
+TabMain:CreateToggle({
+   Name = "Activer TP Walk",
+   CurrentValue = false,
+   Flag = "TPWalkToggle",
+   Callback = function(Value) _G.TPWalkEnabled = Value end,
+})
+
+TabMain:CreateSlider({
+   Name = "Puissance TP Walk",
+   Range = {1, 10},
+   Increment = 0.5,
+   Suffix = " Multiplier",
+   CurrentValue = 2,
+   Flag = "TPWalkSpeed",
+   Callback = function(Value) _G.TPWalkSpeed = Value end,
+})
+
+TabMain:CreateSection("Téléportation & Physique")
+
+_G.ClickTP_Enabled = false
+TabMain:CreateToggle({
+   Name = "Activer Click TP (Ctrl + Clic)",
+   CurrentValue = false,
+   Flag = "TPToggle",
+   Callback = function(Value) _G.ClickTP_Enabled = Value end,
+})
+
+_G.InfJump = false
+TabMain:CreateToggle({
+   Name = "Saut Infini",
+   CurrentValue = false,
+   Flag = "InfJump",
+   Callback = function(Value) _G.InfJump = Value end,
+})
+
+_G.Noclip = false
+TabMain:CreateToggle({
+   Name = "Noclip (Murs)",
+   CurrentValue = false,
+   Flag = "Noclip",
+   Callback = function(Value) _G.Noclip = Value end,
+})
+
+-- --- ONGLET VISUELS ---
+TabVisuals:CreateSection("ESP Joueurs")
+
+TabVisuals:CreateToggle({
+   Name = "ESP Rôles",
+   CurrentValue = false,
+   Flag = "RoleESP",
+   Callback = function(Value)
+       _G.ESP_Enabled = Value
+       task.spawn(function()
+           while _G.ESP_Enabled do
+               for _, player in pairs(Players:GetPlayers()) do
+                   if player ~= LocalPlayer and player.Character then
+                       local highlight = player.Character:FindFirstChild("Highlight") or Instance.new("Highlight", player.Character)
+                       highlight.FillTransparency = 0.5
+                       if player.Backpack:FindFirstChild("Knife") or player.Character:FindFirstChild("Knife") then
+                           highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                       elseif player.Backpack:FindFirstChild("Gun") or player.Character:FindFirstChild("Gun") then
+                           highlight.FillColor = Color3.fromRGB(0, 0, 255)
+                       else
+                           highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                       end
+                   end
+               end
+               task.wait(1)
+           end
+           for _, player in pairs(Players:GetPlayers()) do
+               if player.Character and player.Character:FindFirstChild("Highlight") then
+                   player.Character.Highlight:Destroy()
+               end
+           end
+       end)
+   end,
+})
+
+-- --- ONGLET TOOLS ---
+TabWorld:CreateSection("Scripts Externes")
+
+TabWorld:CreateButton({
+   Name = "Infinite Yield FE",
+   Callback = function()
+       loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+   end,
+})
+
+-- --- BOUCLES DE LOGIQUE ---
+
+RunService.RenderStepped:Connect(function()
+    -- Logique Aim Lock
+    if _G.AimLock_Enabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        local target = GetClosestPlayer()
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            local targetPos = target.Character.HumanoidRootPart.Position
+            local lookAt = CFrame.new(Camera.CFrame.Position, targetPos)
+            Camera.CFrame = Camera.CFrame:Lerp(lookAt, 1 / _G.AimLock_Smoothness)
+        end
+    end
+
+    -- Logique TP Walk
+    if _G.TPWalkEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum.MoveDirection.Magnitude > 0 then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame + (hum.MoveDirection * _G.TPWalkSpeed / 2)
+        end
+    end
+end)
+
+-- Saut Infini
+UserInputService.JumpRequest:Connect(function()
+    if _G.InfJump and LocalPlayer.Character then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+    end
+end)
+
+-- Noclip
+RunService.Stepped:Connect(function()
+    if _G.Noclip and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end
+end)
+
+-- Click TP
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if _G.ClickTP_Enabled and input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+            local targetPos = Mouse.Hit.p
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
+            end
+        end
+    end
+end)
+
+Rayfield:Notify({
+   Title = "Hub Mis à Jour",
+   Content = "Aim Lock et TP Walk prêts !",
+   Duration = 5,
+})
