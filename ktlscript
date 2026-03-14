@@ -53,7 +53,7 @@ local success, err = pcall(function()
         Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
     }
 
-    -- --- ESP FUNCTIONS ---
+    -- --- FUNCTIONS (ESP & MM2) ---
     local function CreateNameTag(player)
         if player.Character and not player.Character:FindFirstChild("KTL5_NameTag") then
             local head = player.Character:WaitForChild("Head", 5)
@@ -108,23 +108,21 @@ local success, err = pcall(function()
     Tabs.Visuals:AddToggle("ESPNames", {Title = "Show Usernames", Default = false }):OnChanged(function(v)
         _G.ESP_Names = v
         if not v then
-            for _, p in pairs(Players:GetPlayers()) do
-                if p.Character and p.Character:FindFirstChild("KTL5_NameTag") then p.Character.KTL5_NameTag:Destroy() end
-            end
+            for _, p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("KTL5_NameTag") then p.Character.KTL5_NameTag:Destroy() end end
         end
     end)
 
     Tabs.Visuals:AddToggle("ESPChams", {Title = "Chams Outline", Default = false }):OnChanged(function(v)
         _G.ESP_Chams = v
         if not v then
-            for _, p in pairs(Players:GetPlayers()) do
-                if p.Character and p.Character:FindFirstChild("KTL5_Chams") then p.Character.KTL5_Chams:Destroy() end
-            end
+            for _, p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("KTL5_Chams") then p.Character.KTL5_Chams:Destroy() end end
         end
     end)
 
     Tabs.Visuals:AddSection("Camera")
-    Tabs.Visuals:AddToggle("CamNoclip", {Title = "Camera Noclip", Default = false }):OnChanged(function(v) _G.CameraNoclip = v end)
+    local CamNoclipToggle = Tabs.Visuals:AddToggle("CamNoclip", {Title = "Camera Noclip (CapsLock)", Default = false })
+    CamNoclipToggle:OnChanged(function(v) _G.CameraNoclip = v end)
+
     Tabs.Visuals:AddSlider("MaxZoom", {Title = "Max Zoom Distance", Min = 12.5, Max = 1000, Default = 12.5, Rounding = 0, Callback = function(v) LocalPlayer.CameraMaxZoomDistance = v end})
     Tabs.Visuals:AddSlider("FOV", {Title = "Field of View", Min = 70, Max = 120, Default = 70, Rounding = 0, Callback = function(v) Camera.FieldOfView = v end})
     
@@ -190,12 +188,7 @@ local success, err = pcall(function()
         if _G.Noclip and LocalPlayer.Character then
             for _, v in pairs(LocalPlayer.Character:GetDescendants()) do if v:IsA("BasePart") and v.CanCollide then v.CanCollide = false end end
         end
-        -- CAMERA NOCLIP LOGIC
-        if _G.CameraNoclip then
-            LocalPlayer.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Invisicam
-        else
-            LocalPlayer.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Zoom
-        end
+        LocalPlayer.DevCameraOcclusionMode = _G.CameraNoclip and Enum.DevCameraOcclusionMode.Invisicam or Enum.DevCameraOcclusionMode.Zoom
     end)
 
     RunService.RenderStepped:Connect(function()
@@ -216,6 +209,11 @@ local success, err = pcall(function()
     UIS.InputBegan:Connect(function(i, gp)
         if gp or not _G.KTL5_Running then return end
         if i.KeyCode == Enum.KeyCode.G then _G.AimLock_Enabled = not _G.AimLock_Enabled AimToggle:SetValue(_G.AimLock_Enabled) end
+        -- KEYBIND CAPSLOCK POUR CAMERA NOCLIP
+        if i.KeyCode == Enum.KeyCode.CapsLock then 
+            _G.CameraNoclip = not _G.CameraNoclip 
+            CamNoclipToggle:SetValue(_G.CameraNoclip)
+        end
         if _G.ClickTP_Enabled and i.UserInputType == Enum.UserInputType.MouseButton1 and UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
             if LocalPlayer.Character then LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p + Vector3.new(0, 3, 0)) end
         end
@@ -252,5 +250,5 @@ local success, err = pcall(function()
 
     Window:SelectTab(1)
     SaveManager:LoadAutoloadConfig()
-    Fluent:Notify({Title = "ktl5 hub", Content = "Camera Noclip Ajoutée !", Duration = 5})
+    Fluent:Notify({Title = "ktl5 hub", Content = "Keybind CapsLock prêt !", Duration = 5})
 end)
