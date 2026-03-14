@@ -13,19 +13,16 @@ local success, err = pcall(function()
     local Mouse = LocalPlayer:GetMouse()
     local Camera = workspace.CurrentCamera
 
-    -- --- ÉCLAIRAGE D'ORIGINE ---
+    -- --- ORIGINALS ---
     local OriginalAmbient = Lighting.Ambient
     local OriginalBrightness = Lighting.Brightness
     local OriginalFOV = Camera.FieldOfView
-
-    -- --- DATABASE ---
-    local GameNames = {[2753915549] = "Blox Fruits (Sea 1)", [4442272183] = "Blox Fruits (Sea 2)", [7449925032] = "Blox Fruits (Sea 3)", [4924144111] = "Brookhaven RP", [8737899170] = "Pet Simulator 99", [155615604] = "Prison Life"}
-    local CurrentGame = GameNames[game.PlaceId] or "Universal Mode"
+    local OriginalZoom = LocalPlayer.CameraMaxZoomDistance
 
     -- --- WINDOW ---
     local Window = Fluent:CreateWindow({
-        Title = "ktl5 hub",
-        SubTitle = "Mode : " .. CurrentGame,
+        Title = "ktl5 hub | Ultimate Version",
+        SubTitle = "Universal & MM2",
         TabWidth = 160,
         Size = UDim2.fromOffset(580, 460),
         Acrylic = false, 
@@ -33,7 +30,7 @@ local success, err = pcall(function()
         MinimizeKey = Enum.KeyCode.K
     })
 
-    -- --- VARIABLES GLOBALES ---
+    -- --- GLOBALS ---
     _G.KTL5_Running = true
     _G.TPWalkEnabled = false
     _G.TPWalkSpeed = 0.5
@@ -42,94 +39,113 @@ local success, err = pcall(function()
     _G.ClickTP_Enabled = false
     _G.InfJump = false
     _G.Noclip = false
-    _G.ESP_Enabled = false
+    _G.ESP_Names = false
+    _G.ESP_Chams = false
+    _G.MM2_ESP = false
     _G.AntiAFK = false
 
     local Tabs = {
         Main = Window:AddTab({ Title = "Combat", Icon = "crosshair" }),
         Visuals = Window:AddTab({ Title = "Visual", Icon = "eye" }),
+        MM2 = Window:AddTab({ Title = "MM2 Special", Icon = "skull" }),
         World = Window:AddTab({ Title = "Tools", Icon = "globe" }),
         Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
     }
 
-    -- --- UTILS ---
-    local function GetClosestPlayer()
-        local closestPlayer = nil
-        local shortestDistance = math.huge
-        local mouseLoc = UIS:GetMouseLocation()
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
-                if onScreen then
-                    local distance = (Vector2.new(pos.X, pos.Y) - mouseLoc).Magnitude
-                    if distance < shortestDistance then
-                        closestPlayer = player
-                        shortestDistance = distance
-                    end
-                end
+    -- --- ESP FUNCTIONS ---
+    local function CreateNameTag(player)
+        if player.Character and not player.Character:FindFirstChild("KTL5_NameTag") then
+            local head = player.Character:WaitForChild("Head", 5)
+            if head then
+                local billboard = Instance.new("BillboardGui", player.Character)
+                billboard.Name = "KTL5_NameTag"
+                billboard.Adornee = head
+                billboard.Size = UDim2.new(0, 100, 0, 50)
+                billboard.StudsOffset = Vector3.new(0, 2, 0)
+                billboard.AlwaysOnTop = true
+
+                local label = Instance.new("TextLabel", billboard)
+                label.BackgroundTransparency = 1
+                label.Size = UDim2.new(1, 0, 1, 0)
+                label.Text = player.Name
+                label.TextColor3 = Color3.new(1, 1, 1)
+                label.TextStrokeTransparency = 0
+                label.Font = Enum.Font.SourceSansBold
+                label.TextSize = 14
             end
         end
-        return closestPlayer
     end
 
-    -- --- COMBAT ---
-    Tabs.Main:AddSection("Target Tracking")
+    local function CreateChams(player)
+        if player.Character and not player.Character:FindFirstChild("KTL5_Chams") then
+            local highlight = Instance.new("Highlight", player.Character)
+            highlight.Name = "KTL5_Chams"
+            highlight.FillColor = Color3.fromRGB(255, 255, 255)
+            highlight.FillTransparency = 0.6
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            highlight.OutlineTransparency = 0
+        end
+    end
+
+    -- --- COMBAT TAB ---
+    Tabs.Main:AddSection("Targeting")
     local AimToggle = Tabs.Main:AddToggle("AimLockToggle", {Title = "AimLock (G Key)", Default = false })
     AimToggle:OnChanged(function() _G.AimLock_Enabled = AimToggle.Value end)
-    Tabs.Main:AddSlider("AimSmooth", {Title = "Tracking Smoothness", Default = 0.5, Min = 0.1, Max = 2, Rounding = 1, Callback = function(v) _G.AimLock_Smoothness = v end})
+    Tabs.Main:AddSlider("AimSmooth", {Title = "Smoothness", Default = 0.5, Min = 0.1, Max = 2, Rounding = 1, Callback = function(v) _G.AimLock_Smoothness = v end})
 
-    Tabs.Main:AddSection("Mobility")
+    Tabs.Main:AddSection("Movement")
     Tabs.Main:AddSlider("WalkSpeed", {Title = "WalkSpeed", Min = 16, Max = 250, Default = 16, Rounding = 0, Callback = function(v) pcall(function() LocalPlayer.Character.Humanoid.WalkSpeed = v end) end})
     Tabs.Main:AddToggle("TPWalkToggle", {Title = "Enable TP Walk", Default = false }):OnChanged(function(v) _G.TPWalkEnabled = v end)
-    Tabs.Main:AddSlider("TPWalkSpeed", {Title = "TP Walk Multiplier", Min = 0.1, Max = 5, Default = 0.5, Rounding = 1, Callback = function(v) _G.TPWalkSpeed = v end})
+    Tabs.Main:AddSlider("TPWalkSpeed", {Title = "TP Walk Speed", Min = 0.1, Max = 5, Default = 0.5, Rounding = 1, Callback = function(v) _G.TPWalkSpeed = v end})
 
     Tabs.Main:AddSection("Physics")
     Tabs.Main:AddToggle("ClickTP", {Title = "Click TP (Ctrl + Click)", Default = false }):OnChanged(function(v) _G.ClickTP_Enabled = v end)
     Tabs.Main:AddToggle("InfJump", {Title = "Infinite Jump", Default = false }):OnChanged(function(v) _G.InfJump = v end)
     Tabs.Main:AddToggle("Noclip", {Title = "Noclip Bypass", Default = false }):OnChanged(function(v) _G.Noclip = v end)
 
-    -- --- VISUALS ---
-    Tabs.Visuals:AddSection("ESP & Visibility")
-    Tabs.Visuals:AddToggle("ESP", {Title = "Highlight Entities", Default = false }):OnChanged(function(v)
-        _G.ESP_Enabled = v
-        if v then
-            task.spawn(function()
-                while _G.ESP_Enabled and _G.KTL5_Running do
-                    for _, p in pairs(Players:GetPlayers()) do
-                        if p ~= LocalPlayer and p.Character then
-                            local h = p.Character:FindFirstChild("Highlight") or Instance.new("Highlight", p.Character)
-                            h.FillColor = Color3.fromRGB(220, 220, 220)
-                            h.FillTransparency = 0.6
-                        end
-                    end
-                    task.wait(2)
-                end
-            end)
-        else
+    -- --- VISUALS TAB ---
+    Tabs.Visuals:AddSection("ESP Players")
+    Tabs.Visuals:AddToggle("ESPNames", {Title = "Show Usernames", Default = false }):OnChanged(function(v)
+        _G.ESP_Names = v
+        if not v then
             for _, p in pairs(Players:GetPlayers()) do
-                if p.Character and p.Character:FindFirstChild("Highlight") then p.Character.Highlight:Destroy() end
+                if p.Character and p.Character:FindFirstChild("KTL5_NameTag") then p.Character.KTL5_NameTag:Destroy() end
             end
         end
     end)
 
+    Tabs.Visuals:AddToggle("ESPChams", {Title = "Chams Outline", Default = false }):OnChanged(function(v)
+        _G.ESP_Chams = v
+        if not v then
+            for _, p in pairs(Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("KTL5_Chams") then p.Character.KTL5_Chams:Destroy() end
+            end
+        end
+    end)
+
+    Tabs.Visuals:AddSection("Camera")
+    Tabs.Visuals:AddSlider("MaxZoom", {Title = "Max Zoom Distance", Min = 12.5, Max = 1000, Default = 12.5, Rounding = 0, Callback = function(v) LocalPlayer.CameraMaxZoomDistance = v end})
+    Tabs.Visuals:AddSlider("FOV", {Title = "Field of View", Min = 70, Max = 120, Default = 70, Rounding = 0, Callback = function(v) Camera.FieldOfView = v end})
+    
+    Tabs.Visuals:AddSection("Environment")
     Tabs.Visuals:AddToggle("Fullbright", {Title = "Force Brightness", Default = false }):OnChanged(function(v)
         Lighting.Ambient = v and Color3.fromRGB(255, 255, 255) or OriginalAmbient
         Lighting.Brightness = v and 2 or OriginalBrightness
     end)
 
-    Tabs.Visuals:AddSlider("FOV", {Title = "Camera FOV", Min = 70, Max = 120, Default = 70, Rounding = 0, Callback = function(v) Camera.FieldOfView = v end})
+    -- --- MM2 SPECIAL TAB ---
+    Tabs.MM2:AddSection("Role Detection")
+    local MM2Toggle = Tabs.MM2:AddToggle("MM2ESP", {Title = "MM2 Role ESP (Chams)", Default = false })
+    MM2Toggle:OnChanged(function()
+        _G.MM2_ESP = MM2Toggle.Value
+        if not _G.MM2_ESP then
+            for _, p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("MM2_Highlight") then p.Character.MM2_Highlight:Destroy() end end
+        end
+    end)
 
-    -- --- WORLD / TOOLS ---
+    -- --- TOOLS TAB ---
     Tabs.World:AddSection("Server Management")
     Tabs.World:AddButton({Title = "Rejoin Server", Callback = function() TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer) end})
-    Tabs.World:AddButton({Title = "Server Hop", Callback = function() 
-        local success, result = pcall(function() return game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100") end)
-        if success then
-            local servers = game:GetService("HttpService"):JSONDecode(result).data
-            for _, s in pairs(servers) do if s.playing < s.maxPlayers and s.id ~= game.JobId then TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer) end end
-        end
-    end})
-
     Tabs.World:AddToggle("AntiAFK", {Title = "Bypass AFK", Default = false }):OnChanged(function(v) _G.AntiAFK = v end)
 
     Tabs.World:AddSection("External Modules")
@@ -137,40 +153,38 @@ local success, err = pcall(function()
     Tabs.World:AddButton({Title = "Inject Infinite Yield", Callback = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))() end})
     Tabs.World:AddButton({Title = "Inject Omega French Voice", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Omegascriptes/French-Voice/refs/heads/main/FrenchVoice.txt"))() end})
 
-    -- --- LOGIC ---
-    LocalPlayer.Idled:Connect(function()
-        if _G.AntiAFK and _G.KTL5_Running then game:GetService("VirtualUser"):CaptureController() game:GetService("VirtualUser"):ClickButton2(Vector2.new()) end
+    -- --- CORE LOGIC ---
+    task.spawn(function()
+        while task.wait(1) do
+            if not _G.KTL5_Running then break end
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    -- Username ESP
+                    if _G.ESP_Names then CreateNameTag(p) end
+                    -- Universal Chams
+                    if _G.ESP_Chams then CreateChams(p) end
+                    -- MM2 Logic
+                    if _G.MM2_ESP then
+                        local role = "Innocent"
+                        if p.Backpack:FindFirstChild("Knife") or p.Character:FindFirstChild("Knife") then role = "Murderer"
+                        elseif p.Backpack:FindFirstChild("Gun") or p.Character:FindFirstChild("Gun") then role = "Sheriff" end
+                        
+                        local h = p.Character:FindFirstChild("MM2_Highlight") or Instance.new("Highlight", p.Character)
+                        h.Name = "MM2_Highlight"
+                        h.FillTransparency = 0.5
+                        if role == "Murderer" then h.FillColor = Color3.fromRGB(255, 0, 0)
+                        elseif role == "Sheriff" then h.FillColor = Color3.fromRGB(0, 0, 255)
+                        else h.FillColor = Color3.fromRGB(0, 255, 0) end
+                    end
+                end
+            end
+        end
     end)
 
-    -- CORRECTION INFINITE JUMP
     UIS.JumpRequest:Connect(function()
         if _G.InfJump and _G.KTL5_Running then
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-                LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
-            end
-        end
-    end)
-
-    RunService.RenderStepped:Connect(function()
-        if not _G.KTL5_Running then return end
-        if _G.AimLock_Enabled and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-            local t = GetClosestPlayer()
-            if t and mousemoverel then
-                local pos = Camera:WorldToViewportPoint(t.Character.HumanoidRootPart.Position)
-                mousemoverel((pos.X - UIS:GetMouseLocation().X) * _G.AimLock_Smoothness, (pos.Y - UIS:GetMouseLocation().Y) * _G.AimLock_Smoothness)
-            end
-        end
-        if _G.TPWalkEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if hum and hum.MoveDirection.Magnitude > 0 then LocalPlayer.Character.HumanoidRootPart.CFrame += (hum.MoveDirection * _G.TPWalkSpeed * 0.1) end
-        end
-    end)
-
-    UIS.InputBegan:Connect(function(i, gp)
-        if gp or not _G.KTL5_Running then return end
-        if i.KeyCode == Enum.KeyCode.G then _G.AimLock_Enabled = not _G.AimLock_Enabled AimToggle:SetValue(_G.AimLock_Enabled) end
-        if _G.ClickTP_Enabled and i.UserInputType == Enum.UserInputType.MouseButton1 and UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
-            if LocalPlayer.Character then LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p + Vector3.new(0, 3, 0)) end
+            local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum:ChangeState("Jumping") end
         end
     end)
 
@@ -188,35 +202,26 @@ local success, err = pcall(function()
     InterfaceManager:BuildInterfaceSection(Tabs.Settings)
     SaveManager:BuildConfigSection(Tabs.Settings)
 
-    Tabs.Settings:AddSection("Script Control")
     Tabs.Settings:AddButton({
         Title = "Unload Script",
-        Description = "Completely remove the script and reset settings",
         Callback = function()
             _G.KTL5_Running = false
-            _G.ESP_Enabled = false
-            _G.Noclip = false
-            _G.InfJump = false
-            
-            Lighting.Ambient = OriginalAmbient
-            Lighting.Brightness = OriginalBrightness
-            Camera.FieldOfView = OriginalFOV
-            
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                LocalPlayer.Character.Humanoid.WalkSpeed = 16
-            end
-            
+            _G.MM2_ESP = false
+            _G.ESP_Names = false
+            _G.ESP_Chams = false
+            Lighting.Ambient, Lighting.Brightness, Camera.FieldOfView, LocalPlayer.CameraMaxZoomDistance = OriginalAmbient, OriginalBrightness, OriginalFOV, OriginalZoom
             for _, p in pairs(Players:GetPlayers()) do
-                if p.Character and p.Character:FindFirstChild("Highlight") then p.Character.Highlight:Destroy() end
+                if p.Character then
+                    if p.Character:FindFirstChild("MM2_Highlight") then p.Character.MM2_Highlight:Destroy() end
+                    if p.Character:FindFirstChild("KTL5_NameTag") then p.Character.KTL5_NameTag:Destroy() end
+                    if p.Character:FindFirstChild("KTL5_Chams") then p.Character.KTL5_Chams:Destroy() end
+                end
             end
-            
             Window:Destroy()
         end
     })
 
     Window:SelectTab(1)
     SaveManager:LoadAutoloadConfig()
-    Fluent:Notify({Title = "ktl5 hub", Content = "Système corrigé & fluide.", Duration = 3})
+    Fluent:Notify({Title = "ktl5 hub", Content = "ESP Username & Chams actifs !", Duration = 5})
 end)
-
-if not success then warn("Hub Error: " .. tostring(err)) end
