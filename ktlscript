@@ -142,6 +142,15 @@ local success, err = pcall(function()
         if _G.AntiAFK and _G.KTL5_Running then game:GetService("VirtualUser"):CaptureController() game:GetService("VirtualUser"):ClickButton2(Vector2.new()) end
     end)
 
+    -- CORRECTION INFINITE JUMP
+    UIS.JumpRequest:Connect(function()
+        if _G.InfJump and _G.KTL5_Running then
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+            end
+        end
+    end)
+
     RunService.RenderStepped:Connect(function()
         if not _G.KTL5_Running then return end
         if _G.AimLock_Enabled and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
@@ -187,8 +196,8 @@ local success, err = pcall(function()
             _G.KTL5_Running = false
             _G.ESP_Enabled = false
             _G.Noclip = false
+            _G.InfJump = false
             
-            -- Reset Game state
             Lighting.Ambient = OriginalAmbient
             Lighting.Brightness = OriginalBrightness
             Camera.FieldOfView = OriginalFOV
@@ -197,7 +206,6 @@ local success, err = pcall(function()
                 LocalPlayer.Character.Humanoid.WalkSpeed = 16
             end
             
-            -- Clear Visuals
             for _, p in pairs(Players:GetPlayers()) do
                 if p.Character and p.Character:FindFirstChild("Highlight") then p.Character.Highlight:Destroy() end
             end
@@ -208,7 +216,7 @@ local success, err = pcall(function()
 
     Window:SelectTab(1)
     SaveManager:LoadAutoloadConfig()
-    Fluent:Notify({Title = "ktl5 hub", Content = "Système fluide & prêt.", Duration = 3})
+    Fluent:Notify({Title = "ktl5 hub", Content = "Système corrigé & fluide.", Duration = 3})
 end)
 
 if not success then warn("Hub Error: " .. tostring(err)) end
