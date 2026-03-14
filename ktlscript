@@ -19,6 +19,15 @@ local success, err = pcall(function()
     local OriginalFOV = Camera.FieldOfView
     local OriginalZoom = LocalPlayer.CameraMaxZoomDistance
 
+    -- --- FOV CIRCLE ---
+    local FOVCircle = Drawing.new("Circle")
+    FOVCircle.Thickness = 1
+    FOVCircle.NumSides = 100
+    FOVCircle.Radius = 150
+    FOVCircle.Filled = false
+    FOVCircle.Visible = false
+    FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+
     -- --- WINDOW ---
     local Window = Fluent:CreateWindow({
         Title = "ktl5 hub | Ultimate Version",
@@ -32,10 +41,11 @@ local success, err = pcall(function()
 
     -- --- GLOBALS ---
     _G.KTL5_Running = true
-    _G.TPWalkEnabled = false
-    _G.TPWalkSpeed = 0.5
     _G.AimLock_Enabled = false
     _G.AimLock_Smoothness = 0.5
+    _G.AimLock_Radius = 150
+    _G.TPWalkEnabled = false
+    _G.TPWalkSpeed = 0.5
     _G.ClickTP_Enabled = false
     _G.InfJump = false
     _G.Noclip = false
@@ -53,7 +63,27 @@ local success, err = pcall(function()
         Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
     }
 
-    -- --- FUNCTIONS (ESP & MM2) ---
+    -- --- UTILS FUNCTIONS ---
+    local function GetClosestPlayer()
+        local closestPlayer = nil
+        local shortestDistance = _G.AimLock_Radius
+        local mouseLoc = UIS:GetMouseLocation()
+
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+                local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+                if onScreen then
+                    local distance = (Vector2.new(pos.X, pos.Y) - mouseLoc).Magnitude
+                    if distance < shortestDistance then
+                        closestPlayer = player
+                        shortestDistance = distance
+                    end
+                end
+            end
+        end
+        return closestPlayer
+    end
+
     local function CreateNameTag(player)
         if player.Character and not player.Character:FindFirstChild("KTL5_NameTag") then
             local head = player.Character:WaitForChild("Head", 5)
@@ -91,7 +121,9 @@ local success, err = pcall(function()
     Tabs.Main:AddSection("Targeting")
     local AimToggle = Tabs.Main:AddToggle("AimLockToggle", {Title = "AimLock (G Key)", Default = false })
     AimToggle:OnChanged(function() _G.AimLock_Enabled = AimToggle.Value end)
+    
     Tabs.Main:AddSlider("AimSmooth", {Title = "Smoothness", Default = 0.5, Min = 0.1, Max = 2, Rounding = 1, Callback = function(v) _G.AimLock_Smoothness = v end})
+    Tabs.Main:AddSlider("AimRadius", {Title = "Aim Radius / FOV", Default = 150, Min = 50, Max = 800, Rounding = 0, Callback = function(v) _G.AimLock_Radius = v FOVCircle.Radius = v end})
 
     Tabs.Main:AddSection("Movement")
     Tabs.Main:AddSlider("WalkSpeed", {Title = "WalkSpeed", Min = 16, Max = 250, Default = 16, Rounding = 0, Callback = function(v) pcall(function() LocalPlayer.Character.Humanoid.WalkSpeed = v end) end})
@@ -119,7 +151,8 @@ local success, err = pcall(function()
         end
     end)
 
-    Tabs.Visuals:AddSection("Camera")
+    Tabs.Visuals:AddSection("Camera & HUD")
+    Tabs.Visuals:AddToggle("ShowFOV", {Title = "Show Aim Fov Circle", Default = false }):OnChanged(function(v) FOVCircle.Visible = v end)
     local CamNoclipToggle = Tabs.Visuals:AddToggle("CamNoclip", {Title = "Camera Noclip (CapsLock)", Default = false })
     CamNoclipToggle:OnChanged(function(v) _G.CameraNoclip = v end)
 
@@ -193,13 +226,21 @@ local success, err = pcall(function()
 
     RunService.RenderStepped:Connect(function()
         if not _G.KTL5_Running then return end
+        
+        -- AimLock Loop
         if _G.AimLock_Enabled and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             local t = GetClosestPlayer()
-            if t and mousemoverel then
+            if t and t.Character and t.Character:FindFirstChild("HumanoidRootPart") and mousemoverel then
                 local pos = Camera:WorldToViewportPoint(t.Character.HumanoidRootPart.Position)
-                mousemoverel((pos.X - UIS:GetMouseLocation().X) * _G.AimLock_Smoothness, (pos.Y - UIS:GetMouseLocation().Y) * _G.AimLock_Smoothness)
+                local mouseLoc = UIS:GetMouseLocation()
+                mousemoverel((pos.X - mouseLoc.X) * _G.AimLock_Smoothness, (pos.Y - mouseLoc.Y) * _G.AimLock_Smoothness)
             end
         end
+
+        -- FOV Circle Position
+        FOVCircle.Position = UIS:GetMouseLocation()
+
+        -- TP Walk
         if _G.TPWalkEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if hum and hum.MoveDirection.Magnitude > 0 then LocalPlayer.Character.HumanoidRootPart.CFrame += (hum.MoveDirection * _G.TPWalkSpeed * 0.1) end
@@ -209,11 +250,7 @@ local success, err = pcall(function()
     UIS.InputBegan:Connect(function(i, gp)
         if gp or not _G.KTL5_Running then return end
         if i.KeyCode == Enum.KeyCode.G then _G.AimLock_Enabled = not _G.AimLock_Enabled AimToggle:SetValue(_G.AimLock_Enabled) end
-        -- KEYBIND CAPSLOCK POUR CAMERA NOCLIP
-        if i.KeyCode == Enum.KeyCode.CapsLock then 
-            _G.CameraNoclip = not _G.CameraNoclip 
-            CamNoclipToggle:SetValue(_G.CameraNoclip)
-        end
+        if i.KeyCode == Enum.KeyCode.CapsLock then _G.CameraNoclip = not _G.CameraNoclip CamNoclipToggle:SetValue(_G.CameraNoclip) end
         if _G.ClickTP_Enabled and i.UserInputType == Enum.UserInputType.MouseButton1 and UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
             if LocalPlayer.Character then LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p + Vector3.new(0, 3, 0)) end
         end
@@ -231,11 +268,7 @@ local success, err = pcall(function()
         Title = "Unload Script",
         Callback = function()
             _G.KTL5_Running = false
-            _G.MM2_ESP = false
-            _G.ESP_Names = false
-            _G.ESP_Chams = false
-            _G.CameraNoclip = false
-            LocalPlayer.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Zoom
+            FOVCircle:Destroy()
             Lighting.Ambient, Lighting.Brightness, Camera.FieldOfView, LocalPlayer.CameraMaxZoomDistance = OriginalAmbient, OriginalBrightness, OriginalFOV, OriginalZoom
             for _, p in pairs(Players:GetPlayers()) do
                 if p.Character then
@@ -250,5 +283,5 @@ local success, err = pcall(function()
 
     Window:SelectTab(1)
     SaveManager:LoadAutoloadConfig()
-    Fluent:Notify({Title = "ktl5 hub", Content = "Keybind CapsLock prêt !", Duration = 5})
+    Fluent:Notify({Title = "ktl5 hub", Content = "AimLock Réparé !", Duration = 5})
 end)
