@@ -1,69 +1,67 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local success, err = pcall(function()
+    local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+    local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+    local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- --- DATABASE DES JEUX POUR LA DÉTECTION ---
-local GameNames = {
-    [2753915549] = "Blox Fruits (Sea 1)",
-    [4442272183] = "Blox Fruits (Sea 2)",
-    [7449925032] = "Blox Fruits (Sea 3)",
-    [4924144111] = "Brookhaven RP",
-    [8737899170] = "Pet Simulator 99",
-    [155615604] = "Prison Life"
-}
+    -- --- SERVICES ---
+    local UIS = game:GetService("UserInputService")
+    local RunService = game:GetService("RunService")
+    local Lighting = game:GetService("Lighting")
+    local Players = game:GetService("Players")
+    local TeleportService = game:GetService("TeleportService")
+    local LocalPlayer = Players.LocalPlayer
+    local Mouse = LocalPlayer:GetMouse()
+    local Camera = workspace.CurrentCamera
 
-local CurrentGame = GameNames[game.PlaceId] or "Universal Mode"
+    -- --- ÉCLAIRAGE D'ORIGINE ---
+    local OriginalAmbient = Lighting.Ambient
+    local OriginalBrightness = Lighting.Brightness
+    local OriginalFOV = Camera.FieldOfView
 
-local Window = Rayfield:CreateWindow({
-   Name = "ktl5 Ultimate Hub | " .. CurrentGame,
-   LoadingTitle = "Initializing Hub...",
-   LoadingSubtitle = "by ktl5",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "ktl5_Scripts",
-      FileName = "MainConfig"
-   },
-   KeySystem = false
-})
+    -- --- DATABASE ---
+    local GameNames = {[2753915549] = "Blox Fruits (Sea 1)", [4442272183] = "Blox Fruits (Sea 2)", [7449925032] = "Blox Fruits (Sea 3)", [4924144111] = "Brookhaven RP", [8737899170] = "Pet Simulator 99", [155615604] = "Prison Life"}
+    local CurrentGame = GameNames[game.PlaceId] or "Universal Mode"
 
--- --- SERVICES ---
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local Lighting = game:GetService("Lighting")
-local Players = game:GetService("Players")
-local TeleportService = game:GetService("TeleportService")
-local VirtualUser = game:GetService("VirtualUser")
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
-local Camera = workspace.CurrentCamera
+    -- --- WINDOW ---
+    local Window = Fluent:CreateWindow({
+        Title = "ktl5 hub",
+        SubTitle = "Mode : " .. CurrentGame,
+        TabWidth = 160,
+        Size = UDim2.fromOffset(580, 460),
+        Acrylic = false, 
+        Theme = "Dark",
+        MinimizeKey = Enum.KeyCode.K
+    })
 
--- --- GLOBAL VARIABLES ---
-_G.TPWalkEnabled = false
-_G.TPWalkSpeed = 0.5 -- Valeur par défaut plus basse
-_G.AimLock_Enabled = false
-_G.AimLock_Smoothness = 0.5
-_G.ClickTP_Enabled = false
-_G.InfJump = false
-_G.Noclip = false
-_G.ESP_Enabled = false
-_G.AntiAFK = false
+    -- --- VARIABLES GLOBALES ---
+    _G.KTL5_Running = true
+    _G.TPWalkEnabled = false
+    _G.TPWalkSpeed = 0.5
+    _G.AimLock_Enabled = false
+    _G.AimLock_Smoothness = 0.5
+    _G.ClickTP_Enabled = false
+    _G.InfJump = false
+    _G.Noclip = false
+    _G.ESP_Enabled = false
+    _G.AntiAFK = false
 
--- --- TABS ---
-local TabMain = Window:CreateTab("Universal", 4483362458)
-local TabVisuals = Window:CreateTab("Visuals", 4483362458)
-local TabWorld = Window:CreateTab("Tools", 4483362458)
-local TabSettings = Window:CreateTab("Settings", 4483362458)
+    local Tabs = {
+        Main = Window:AddTab({ Title = "Combat", Icon = "crosshair" }),
+        Visuals = Window:AddTab({ Title = "Visual", Icon = "eye" }),
+        World = Window:AddTab({ Title = "Tools", Icon = "globe" }),
+        Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+    }
 
--- --- UTILITY FUNCTIONS ---
-local function GetClosestPlayer()
-    local closestPlayer = nil
-    local shortestDistance = math.huge
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local hum = player.Character:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 then
+    -- --- UTILS ---
+    local function GetClosestPlayer()
+        local closestPlayer = nil
+        local shortestDistance = math.huge
+        local mouseLoc = UIS:GetMouseLocation()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                 local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
                 if onScreen then
-                    local mousePos = UserInputService:GetMouseLocation()
-                    local distance = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
+                    local distance = (Vector2.new(pos.X, pos.Y) - mouseLoc).Magnitude
                     if distance < shortestDistance then
                         closestPlayer = player
                         shortestDistance = distance
@@ -71,269 +69,146 @@ local function GetClosestPlayer()
                 end
             end
         end
+        return closestPlayer
     end
-    return closestPlayer
-end
 
--- --- MAIN TAB (Combat & Movement) ---
-TabMain:CreateSection("Combat (Mouse Aim)")
+    -- --- COMBAT ---
+    Tabs.Main:AddSection("Target Tracking")
+    local AimToggle = Tabs.Main:AddToggle("AimLockToggle", {Title = "AimLock (G Key)", Default = false })
+    AimToggle:OnChanged(function() _G.AimLock_Enabled = AimToggle.Value end)
+    Tabs.Main:AddSlider("AimSmooth", {Title = "Tracking Smoothness", Default = 0.5, Min = 0.1, Max = 2, Rounding = 1, Callback = function(v) _G.AimLock_Smoothness = v end})
 
-local AimToggle = TabMain:CreateToggle({
-   Name = "Mouse Aim Lock (G Key)",
-   CurrentValue = false,
-   Flag = "AimLockToggle",
-   Callback = function(Value) _G.AimLock_Enabled = Value end,
-})
+    Tabs.Main:AddSection("Mobility")
+    Tabs.Main:AddSlider("WalkSpeed", {Title = "WalkSpeed", Min = 16, Max = 250, Default = 16, Rounding = 0, Callback = function(v) pcall(function() LocalPlayer.Character.Humanoid.WalkSpeed = v end) end})
+    Tabs.Main:AddToggle("TPWalkToggle", {Title = "Enable TP Walk", Default = false }):OnChanged(function(v) _G.TPWalkEnabled = v end)
+    Tabs.Main:AddSlider("TPWalkSpeed", {Title = "TP Walk Multiplier", Min = 0.1, Max = 5, Default = 0.5, Rounding = 1, Callback = function(v) _G.TPWalkSpeed = v end})
 
-TabMain:CreateSlider({
-   Name = "Aim Smoothness",
-   Range = {0.1, 1},
-   Increment = 0.1,
-   Suffix = " Speed",
-   CurrentValue = 0.5,
-   Flag = "AimSmooth",
-   Callback = function(Value) _G.AimLock_Smoothness = Value end,
-})
+    Tabs.Main:AddSection("Physics")
+    Tabs.Main:AddToggle("ClickTP", {Title = "Click TP (Ctrl + Click)", Default = false }):OnChanged(function(v) _G.ClickTP_Enabled = v end)
+    Tabs.Main:AddToggle("InfJump", {Title = "Infinite Jump", Default = false }):OnChanged(function(v) _G.InfJump = v end)
+    Tabs.Main:AddToggle("Noclip", {Title = "Noclip Bypass", Default = false }):OnChanged(function(v) _G.Noclip = v end)
 
-TabMain:CreateSection("Movement")
-
-TabMain:CreateSlider({
-   Name = "WalkSpeed",
-   Range = {16, 250},
-   Increment = 1,
-   Suffix = " Studs",
-   CurrentValue = 16,
-   Callback = function(Value)
-       if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-           LocalPlayer.Character.Humanoid.WalkSpeed = Value
-       end
-   end,
-})
-
-TabMain:CreateSlider({
-   Name = "JumpPower",
-   Range = {50, 500},
-   Increment = 5,
-   Suffix = " Power",
-   CurrentValue = 50,
-   Callback = function(Value)
-       if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-           LocalPlayer.Character.Humanoid.JumpPower = Value
-       end
-   end,
-})
-
-TabMain:CreateSection("TP Walk (Very Smooth)")
-
-TabMain:CreateToggle({
-   Name = "Enable TP Walk",
-   CurrentValue = false,
-   Callback = function(Value) _G.TPWalkEnabled = Value end,
-})
-
-TabMain:CreateSlider({
-   Name = "TP Walk Speed",
-   Range = {0.1, 5}, -- Gamme réduite pour plus de précision
-   Increment = 0.1, -- Incrément plus petit pour un réglage fin
-   CurrentValue = 0.5,
-   Callback = function(Value) _G.TPWalkSpeed = Value end,
-})
-
-TabMain:CreateSection("Physics & Teleport")
-
-TabMain:CreateToggle({
-   Name = "Click TP (Ctrl + Click)",
-   CurrentValue = false,
-   Callback = function(Value) _G.ClickTP_Enabled = Value end,
-})
-
-TabMain:CreateToggle({
-   Name = "Infinite Jump",
-   CurrentValue = false,
-   Callback = function(Value) _G.InfJump = Value end,
-})
-
-TabMain:CreateToggle({
-   Name = "Noclip",
-   CurrentValue = false,
-   Callback = function(Value) _G.Noclip = Value end,
-})
-
--- --- VISUALS TAB ---
-TabVisuals:CreateSection("Player ESP")
-
-TabVisuals:CreateToggle({
-   Name = "Visual ESP (Highlights)",
-   CurrentValue = false,
-   Callback = function(Value)
-       _G.ESP_Enabled = Value
-       task.spawn(function()
-           while _G.ESP_Enabled do
-               for _, player in pairs(Players:GetPlayers()) do
-                   if player ~= LocalPlayer and player.Character then
-                       local highlight = player.Character:FindFirstChild("Highlight") or Instance.new("Highlight", player.Character)
-                       highlight.FillTransparency = 0.5
-                       highlight.OutlineTransparency = 0
-                       highlight.FillColor = Color3.fromRGB(0, 255, 150)
-                   end
-               end
-               task.wait(1)
-           end
-           for _, player in pairs(Players:GetPlayers()) do
-               if player.Character and player.Character:FindFirstChild("Highlight") then
-                   player.Character.Highlight:Destroy()
-               end
-           end
-       end)
-   end,
-})
-
-TabVisuals:CreateSection("Environment")
-
-TabVisuals:CreateToggle({
-   Name = "Fullbright",
-   CurrentValue = false,
-   Callback = function(Value)
-       Lighting.Ambient = Value and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(127, 127, 127)
-       Lighting.Brightness = Value and 2 or 1
-   end,
-})
-
-TabVisuals:CreateSlider({
-   Name = "Field Of View (FOV)",
-   Range = {70,120},
-   Increment = 1,
-   CurrentValue = 70,
-   Callback = function(Value)
-       Camera.FieldOfView = Value
-   end,
-})
-
--- --- TOOLS TAB ---
-TabWorld:CreateSection("Server Utilities")
-
-TabWorld:CreateButton({
-   Name = "Server Hop",
-   Callback = function()
-       local Http = game:GetService("HttpService")
-       local Api = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-       local servers = Http:JSONDecode(game:HttpGet(Api)).data
-       for _, s in pairs(servers) do
-           if s.playing < s.maxPlayers and s.id ~= game.JobId then
-               TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
-           end
-       end
-   end,
-})
-
-TabWorld:CreateButton({
-   Name = "Rejoin Server",
-   Callback = function()
-       TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
-   end,
-})
-
-TabWorld:CreateSection("World Physics")
-
-TabWorld:CreateToggle({
-   Name = "Anti-AFK",
-   CurrentValue = false,
-   Callback = function(Value) _G.AntiAFK = Value end,
-})
-
-TabWorld:CreateSection("External Scripts")
-
-TabWorld:CreateButton({
-   Name = "Onion PVP BloxFruits",
-   Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/onion132005-bit/test0.02/refs/heads/main/onion13v6.lua"))() end,
-})
-
-TabWorld:CreateButton({
-   Name = "Infinite Yield",
-   Callback = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))() end,
-})
-
-TabWorld:CreateButton({
-   Name = "Omega French voice",
-   Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Omegascriptes/French-Voice/refs/heads/main/FrenchVoice.txt"))() end,
-})
-
--- --- SETTINGS TAB ---
-TabSettings:CreateSection("Hub Settings")
-
-TabSettings:CreateButton({
-   Name = "Unload Hub",
-   Callback = function() Rayfield:Destroy() end,
-})
-
--- --- LOGIC LOOPS ---
-
--- Anti-AFK
-LocalPlayer.Idled:Connect(function()
-    if _G.AntiAFK then
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new())
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    -- AimLock Logic
-    if _G.AimLock_Enabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        local target = GetClosestPlayer()
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            local screenPos, onScreen = Camera:WorldToViewportPoint(target.Character.HumanoidRootPart.Position)
-            if onScreen then
-                local mouseLocation = UserInputService:GetMouseLocation()
-                local moveX = (screenPos.X - mouseLocation.X) * _G.AimLock_Smoothness
-                local moveY = (screenPos.Y - mouseLocation.Y) * _G.AimLock_Smoothness
-                if mousemoverel then mousemoverel(moveX, moveY) end
+    -- --- VISUALS ---
+    Tabs.Visuals:AddSection("ESP & Visibility")
+    Tabs.Visuals:AddToggle("ESP", {Title = "Highlight Entities", Default = false }):OnChanged(function(v)
+        _G.ESP_Enabled = v
+        if v then
+            task.spawn(function()
+                while _G.ESP_Enabled and _G.KTL5_Running do
+                    for _, p in pairs(Players:GetPlayers()) do
+                        if p ~= LocalPlayer and p.Character then
+                            local h = p.Character:FindFirstChild("Highlight") or Instance.new("Highlight", p.Character)
+                            h.FillColor = Color3.fromRGB(220, 220, 220)
+                            h.FillTransparency = 0.6
+                        end
+                    end
+                    task.wait(2)
+                end
+            end)
+        else
+            for _, p in pairs(Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("Highlight") then p.Character.Highlight:Destroy() end
             end
         end
-    end
+    end)
 
-    -- TP Walk Logic (MODIFIÉ POUR ÊTRE PLUS LENT)
-    if _G.TPWalkEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum and hum.MoveDirection.Magnitude > 0 then
-            -- On multiplie par 0.1 pour que même à 1 ou 2 sur le slider, ce soit très contrôlable
-            LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame + (hum.MoveDirection * _G.TPWalkSpeed * 0.1)
+    Tabs.Visuals:AddToggle("Fullbright", {Title = "Force Brightness", Default = false }):OnChanged(function(v)
+        Lighting.Ambient = v and Color3.fromRGB(255, 255, 255) or OriginalAmbient
+        Lighting.Brightness = v and 2 or OriginalBrightness
+    end)
+
+    Tabs.Visuals:AddSlider("FOV", {Title = "Camera FOV", Min = 70, Max = 120, Default = 70, Rounding = 0, Callback = function(v) Camera.FieldOfView = v end})
+
+    -- --- WORLD / TOOLS ---
+    Tabs.World:AddSection("Server Management")
+    Tabs.World:AddButton({Title = "Rejoin Server", Callback = function() TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer) end})
+    Tabs.World:AddButton({Title = "Server Hop", Callback = function() 
+        local success, result = pcall(function() return game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100") end)
+        if success then
+            local servers = game:GetService("HttpService"):JSONDecode(result).data
+            for _, s in pairs(servers) do if s.playing < s.maxPlayers and s.id ~= game.JobId then TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer) end end
         end
-    end
-end)
+    end})
 
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == Enum.KeyCode.G then
-        _G.AimLock_Enabled = not _G.AimLock_Enabled
-        AimToggle:Set(_G.AimLock_Enabled)
-    end
-    if _G.ClickTP_Enabled and input.UserInputType == Enum.UserInputType.MouseButton1 and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-        if LocalPlayer.Character then
-            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p + Vector3.new(0, 3, 0))
+    Tabs.World:AddToggle("AntiAFK", {Title = "Bypass AFK", Default = false }):OnChanged(function(v) _G.AntiAFK = v end)
+
+    Tabs.World:AddSection("External Modules")
+    Tabs.World:AddButton({Title = "Inject Onion PVP", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/onion132005-bit/test0.02/refs/heads/main/onion13v6.lua"))() end})
+    Tabs.World:AddButton({Title = "Inject Infinite Yield", Callback = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))() end})
+    Tabs.World:AddButton({Title = "Inject Omega French Voice", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Omegascriptes/French-Voice/refs/heads/main/FrenchVoice.txt"))() end})
+
+    -- --- LOGIC ---
+    LocalPlayer.Idled:Connect(function()
+        if _G.AntiAFK and _G.KTL5_Running then game:GetService("VirtualUser"):CaptureController() game:GetService("VirtualUser"):ClickButton2(Vector2.new()) end
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        if not _G.KTL5_Running then return end
+        if _G.AimLock_Enabled and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+            local t = GetClosestPlayer()
+            if t and mousemoverel then
+                local pos = Camera:WorldToViewportPoint(t.Character.HumanoidRootPart.Position)
+                mousemoverel((pos.X - UIS:GetMouseLocation().X) * _G.AimLock_Smoothness, (pos.Y - UIS:GetMouseLocation().Y) * _G.AimLock_Smoothness)
+            end
         end
-    end
-end)
-
-UserInputService.JumpRequest:Connect(function()
-    if _G.InfJump and LocalPlayer.Character then
-        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
-    end
-end)
-
-RunService.Stepped:Connect(function()
-    if _G.Noclip and LocalPlayer.Character then
-        for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
-            if v:IsA("BasePart") then v.CanCollide = false end
+        if _G.TPWalkEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.MoveDirection.Magnitude > 0 then LocalPlayer.Character.HumanoidRootPart.CFrame += (hum.MoveDirection * _G.TPWalkSpeed * 0.1) end
         end
-    end
+    end)
+
+    UIS.InputBegan:Connect(function(i, gp)
+        if gp or not _G.KTL5_Running then return end
+        if i.KeyCode == Enum.KeyCode.G then _G.AimLock_Enabled = not _G.AimLock_Enabled AimToggle:SetValue(_G.AimLock_Enabled) end
+        if _G.ClickTP_Enabled and i.UserInputType == Enum.UserInputType.MouseButton1 and UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
+            if LocalPlayer.Character then LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p + Vector3.new(0, 3, 0)) end
+        end
+    end)
+
+    RunService.Stepped:Connect(function()
+        if _G.Noclip and _G.KTL5_Running and LocalPlayer.Character then
+            for _, v in pairs(LocalPlayer.Character:GetDescendants()) do if v:IsA("BasePart") and v.CanCollide then v.CanCollide = false end end
+        end
+    end)
+
+    -- --- SETTINGS ---
+    SaveManager:SetLibrary(Fluent)
+    InterfaceManager:SetLibrary(Fluent)
+    InterfaceManager:SetFolder("ktl5_hub")
+    SaveManager:SetFolder("ktl5_hub/configs")
+    InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+    SaveManager:BuildConfigSection(Tabs.Settings)
+
+    Tabs.Settings:AddSection("Script Control")
+    Tabs.Settings:AddButton({
+        Title = "Unload Script",
+        Description = "Completely remove the script and reset settings",
+        Callback = function()
+            _G.KTL5_Running = false
+            _G.ESP_Enabled = false
+            _G.Noclip = false
+            
+            -- Reset Game state
+            Lighting.Ambient = OriginalAmbient
+            Lighting.Brightness = OriginalBrightness
+            Camera.FieldOfView = OriginalFOV
+            
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                LocalPlayer.Character.Humanoid.WalkSpeed = 16
+            end
+            
+            -- Clear Visuals
+            for _, p in pairs(Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("Highlight") then p.Character.Highlight:Destroy() end
+            end
+            
+            Window:Destroy()
+        end
+    })
+
+    Window:SelectTab(1)
+    SaveManager:LoadAutoloadConfig()
+    Fluent:Notify({Title = "ktl5 hub", Content = "Système fluide & prêt.", Duration = 3})
 end)
 
-Rayfield:LoadConfiguration()
-
--- --- NOTIFICATION DE DÉMARRAGE AVEC DÉTECTION ---
-Rayfield:Notify({
-   Title = "Game Detected!",
-   Content = "Current Game: " .. CurrentGame .. ". TP Walk Optimisé.",
-   Duration = 6.5,
-   Image = 4483362458,
-})
+if not success then warn("Hub Error: " .. tostring(err)) end
