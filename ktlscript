@@ -39,6 +39,7 @@ local success, err = pcall(function()
     _G.ClickTP_Enabled = false
     _G.InfJump = false
     _G.Noclip = false
+    _G.CameraNoclip = false
     _G.ESP_Names = false
     _G.ESP_Chams = false
     _G.MM2_ESP = false
@@ -63,7 +64,6 @@ local success, err = pcall(function()
                 billboard.Size = UDim2.new(0, 100, 0, 50)
                 billboard.StudsOffset = Vector3.new(0, 2, 0)
                 billboard.AlwaysOnTop = true
-
                 local label = Instance.new("TextLabel", billboard)
                 label.BackgroundTransparency = 1
                 label.Size = UDim2.new(1, 0, 1, 0)
@@ -124,6 +124,7 @@ local success, err = pcall(function()
     end)
 
     Tabs.Visuals:AddSection("Camera")
+    Tabs.Visuals:AddToggle("CamNoclip", {Title = "Camera Noclip", Default = false }):OnChanged(function(v) _G.CameraNoclip = v end)
     Tabs.Visuals:AddSlider("MaxZoom", {Title = "Max Zoom Distance", Min = 12.5, Max = 1000, Default = 12.5, Rounding = 0, Callback = function(v) LocalPlayer.CameraMaxZoomDistance = v end})
     Tabs.Visuals:AddSlider("FOV", {Title = "Field of View", Min = 70, Max = 120, Default = 70, Rounding = 0, Callback = function(v) Camera.FieldOfView = v end})
     
@@ -159,16 +160,12 @@ local success, err = pcall(function()
             if not _G.KTL5_Running then break end
             for _, p in pairs(Players:GetPlayers()) do
                 if p ~= LocalPlayer and p.Character then
-                    -- Username ESP
                     if _G.ESP_Names then CreateNameTag(p) end
-                    -- Universal Chams
                     if _G.ESP_Chams then CreateChams(p) end
-                    -- MM2 Logic
                     if _G.MM2_ESP then
                         local role = "Innocent"
                         if p.Backpack:FindFirstChild("Knife") or p.Character:FindFirstChild("Knife") then role = "Murderer"
                         elseif p.Backpack:FindFirstChild("Gun") or p.Character:FindFirstChild("Gun") then role = "Sheriff" end
-                        
                         local h = p.Character:FindFirstChild("MM2_Highlight") or Instance.new("Highlight", p.Character)
                         h.Name = "MM2_Highlight"
                         h.FillTransparency = 0.5
@@ -189,8 +186,38 @@ local success, err = pcall(function()
     end)
 
     RunService.Stepped:Connect(function()
-        if _G.Noclip and _G.KTL5_Running and LocalPlayer.Character then
+        if not _G.KTL5_Running then return end
+        if _G.Noclip and LocalPlayer.Character then
             for _, v in pairs(LocalPlayer.Character:GetDescendants()) do if v:IsA("BasePart") and v.CanCollide then v.CanCollide = false end end
+        end
+        -- CAMERA NOCLIP LOGIC
+        if _G.CameraNoclip then
+            LocalPlayer.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Invisicam
+        else
+            LocalPlayer.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Zoom
+        end
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        if not _G.KTL5_Running then return end
+        if _G.AimLock_Enabled and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+            local t = GetClosestPlayer()
+            if t and mousemoverel then
+                local pos = Camera:WorldToViewportPoint(t.Character.HumanoidRootPart.Position)
+                mousemoverel((pos.X - UIS:GetMouseLocation().X) * _G.AimLock_Smoothness, (pos.Y - UIS:GetMouseLocation().Y) * _G.AimLock_Smoothness)
+            end
+        end
+        if _G.TPWalkEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.MoveDirection.Magnitude > 0 then LocalPlayer.Character.HumanoidRootPart.CFrame += (hum.MoveDirection * _G.TPWalkSpeed * 0.1) end
+        end
+    end)
+
+    UIS.InputBegan:Connect(function(i, gp)
+        if gp or not _G.KTL5_Running then return end
+        if i.KeyCode == Enum.KeyCode.G then _G.AimLock_Enabled = not _G.AimLock_Enabled AimToggle:SetValue(_G.AimLock_Enabled) end
+        if _G.ClickTP_Enabled and i.UserInputType == Enum.UserInputType.MouseButton1 and UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
+            if LocalPlayer.Character then LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p + Vector3.new(0, 3, 0)) end
         end
     end)
 
@@ -209,6 +236,8 @@ local success, err = pcall(function()
             _G.MM2_ESP = false
             _G.ESP_Names = false
             _G.ESP_Chams = false
+            _G.CameraNoclip = false
+            LocalPlayer.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Zoom
             Lighting.Ambient, Lighting.Brightness, Camera.FieldOfView, LocalPlayer.CameraMaxZoomDistance = OriginalAmbient, OriginalBrightness, OriginalFOV, OriginalZoom
             for _, p in pairs(Players:GetPlayers()) do
                 if p.Character then
@@ -223,5 +252,5 @@ local success, err = pcall(function()
 
     Window:SelectTab(1)
     SaveManager:LoadAutoloadConfig()
-    Fluent:Notify({Title = "ktl5 hub", Content = "ESP Username & Chams actifs !", Duration = 5})
+    Fluent:Notify({Title = "ktl5 hub", Content = "Camera Noclip Ajoutée !", Duration = 5})
 end)
