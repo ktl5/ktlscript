@@ -55,42 +55,105 @@ local success, err = pcall(function()
     _G.AntiAFK = false
 
     local Tabs = {
-        Main = Window:AddTab({ Title = "Combat", Icon = "crosshair" }),
-        Visuals = Window:AddTab({ Title = "Visual", Icon = "eye" }),
-        MM2 = Window:AddTab({ Title = "MM2 Special", Icon = "skull" }),
-        World = Window:AddTab({ Title = "Tools", Icon = "globe" }),
-        Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+        Main     = Window:AddTab({ Title = "Combat",      Icon = "crosshair" }),
+        Visuals  = Window:AddTab({ Title = "Visual",      Icon = "eye"       }),
+        MM2      = Window:AddTab({ Title = "MM2 Special", Icon = "skull"     }),
+        World    = Window:AddTab({ Title = "Tools",       Icon = "globe"     }),
+        Settings = Window:AddTab({ Title = "Settings",    Icon = "settings"  })
     }
 
     -- =============================================
-    --         FLY SYSTEM - ULTRA SMOOTH
+    --     FLY SYSTEM — SMOOTH + COLLISIONS
     -- =============================================
     local flyBodyVelocity, flyBodyGyro
-    local currentFlyVelocity = Vector3.zero   -- vélocité interpolée actuelle
-    local smoothedLookVector = Vector3.new(0,0,-1)  -- direction cam lissée
-    local smoothedRightVector = Vector3.new(1,0,0)  -- droite cam lissée
+    local currentFlyVelocity  = Vector3.zero
+    local smoothedLookVector  = Vector3.new(0, 0, -1)
+    local smoothedRightVector = Vector3.new(1, 0, 0)
+
+    -- Distance de détection des surfaces (en studs)
+    local COLLISION_PROBE_DIST = 2.8
+    -- Amortissement quand on glisse le long d'un mur (0 = stop, 1 = glisse parfait)
+    local SLIDE_DAMPING = 0.85
 
     local function CleanUpFly()
-        currentFlyVelocity = Vector3.zero
-        smoothedLookVector = Vector3.new(0,0,-1)
-        smoothedRightVector = Vector3.new(1,0,0)
+        currentFlyVelocity  = Vector3.zero
+        smoothedLookVector  = Vector3.new(0, 0, -1)
+        smoothedRightVector = Vector3.new(1, 0, 0)
         if flyBodyVelocity then flyBodyVelocity:Destroy() flyBodyVelocity = nil end
-        if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = LocalPlayer.Character.HumanoidRootPart
-            local oldBv = hrp:FindFirstChild("KTL5_FlyBV")
-            if oldBv then oldBv:Destroy() end
-            local oldBg = hrp:FindFirstChild("KTL5_FlyBG")
-            if oldBg then oldBg:Destroy() end
-        end
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").PlatformStand = false
+        if flyBodyGyro     then flyBodyGyro:Destroy()     flyBodyGyro     = nil end
+        if LocalPlayer.Character then
+            local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local bv = hrp:FindFirstChild("KTL5_FlyBV") if bv then bv:Destroy() end
+                local bg = hrp:FindFirstChild("KTL5_FlyBG") if bg then bg:Destroy() end
+            end
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum.PlatformStand = false end
         end
     end
 
+    -- =============================================
+    --   COLLISION SLIDE — cœur de la feature
+    --
+    --   Principe : on envoie des raycasts dans la
+    --   direction de la vélocité depuis le centre
+    --   du HRP + 4 points autour.
+    --   Si un mur/sol est détecté à moins de
+    --   COLLISION_PROBE_DIST studs, on retire la
+    --   composante de vélocité qui va "dans" la
+    --   surface → le perso glisse le long du mur
+    --   au lieu de s'y coller ou de le traverser.
+    -- =============================================
+    local function ApplyCollisionSlide(hrp, velocity)
+        if velocity.Magnitude < 0.5 then return velocity end
+
+        local rayParams = RaycastParams.new()
+        rayParams.FilterDescendantsInstances = { LocalPlayer.Character }
+        rayParams.FilterType = Enum.RaycastFilterType.Exclude
+
+        local origin   = hrp.Position
+        local velDir   = velocity.Unit
+        local halfSize = hrp.Size * 0.5
+
+        -- On lance 5 rayons : centre + 4 coins du HRP dans la direction du mouvement
+        local offsets = {
+            Vector3.zero,
+            Vector3.new( halfSize.X,  halfSize.Y, 0),
+            Vector3.new(-halfSize.X,  halfSize.Y, 0),
+            Vector3.new( halfSize.X, -halfSize.Y, 0),
+            Vector3.new(-halfSize.X, -halfSize.Y, 0),
+        }
+
+        local hitNormals = {}
+        for _, offset in ipairs(offsets) do
+            local result = workspace:Raycast(origin + offset, velDir * COLLISION_PROBE_DIST, rayParams)
+            if result then
+                table.insert(hitNormals, result.Normal)
+            end
+        end
+
+        if #hitNormals == 0 then return velocity end
+
+        -- Moyenne des normales touchées (pour les coins arrondis)
+        local avgNormal = Vector3.zero
+        for _, n in ipairs(hitNormals) do avgNormal = avgNormal + n end
+        avgNormal = (avgNormal / #hitNormals).Unit
+
+        -- Composante pénétrante (dans la surface)
+        local penetration = velocity:Dot(avgNormal)
+
+        -- On ne retire que si on fonce dedans (penetration négative = on va vers la surface)
+        if penetration < 0 then
+            -- Projection : on garde seulement la partie tangente à la surface
+            local slideVelocity = velocity - avgNormal * penetration
+            return slideVelocity * SLIDE_DAMPING
+        end
+
+        return velocity
+    end
+
     local function GetClosestPlayer()
-        local closestPlayer = nil
-        local shortestDistance = _G.AimLock_Radius
+        local closestPlayer, shortestDistance = nil, _G.AimLock_Radius
         local mouseLoc = UIS:GetMouseLocation()
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character
@@ -99,11 +162,8 @@ local success, err = pcall(function()
                 and player.Character.Humanoid.Health > 0 then
                 local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
                 if onScreen then
-                    local distance = (Vector2.new(pos.X, pos.Y) - mouseLoc).Magnitude
-                    if distance < shortestDistance then
-                        closestPlayer = player
-                        shortestDistance = distance
-                    end
+                    local dist = (Vector2.new(pos.X, pos.Y) - mouseLoc).Magnitude
+                    if dist < shortestDistance then closestPlayer = player shortestDistance = dist end
                 end
             end
         end
@@ -114,116 +174,97 @@ local success, err = pcall(function()
         if player.Character and not player.Character:FindFirstChild("KTL5_NameTag") then
             local head = player.Character:WaitForChild("Head", 5)
             if head then
-                local billboard = Instance.new("BillboardGui", player.Character)
-                billboard.Name = "KTL5_NameTag"
-                billboard.Adornee = head
-                billboard.Size = UDim2.new(0, 100, 0, 50)
-                billboard.StudsOffset = Vector3.new(0, 2, 0)
-                billboard.AlwaysOnTop = true
-                local label = Instance.new("TextLabel", billboard)
-                label.BackgroundTransparency = 1
-                label.Size = UDim2.new(1, 0, 1, 0)
-                label.Text = player.Name
-                label.TextColor3 = Color3.new(1, 1, 1)
-                label.TextStrokeTransparency = 0
-                label.Font = Enum.Font.SourceSansBold
-                label.TextSize = 14
+                local bb = Instance.new("BillboardGui", player.Character)
+                bb.Name = "KTL5_NameTag" bb.Adornee = head
+                bb.Size = UDim2.new(0,100,0,50) bb.StudsOffset = Vector3.new(0,2,0) bb.AlwaysOnTop = true
+                local lbl = Instance.new("TextLabel", bb)
+                lbl.BackgroundTransparency = 1 lbl.Size = UDim2.new(1,0,1,0)
+                lbl.Text = player.Name lbl.TextColor3 = Color3.new(1,1,1)
+                lbl.TextStrokeTransparency = 0 lbl.Font = Enum.Font.SourceSansBold lbl.TextSize = 14
             end
         end
     end
 
     local function CreateChams(player)
         if player.Character and not player.Character:FindFirstChild("KTL5_Chams") then
-            local highlight = Instance.new("Highlight", player.Character)
-            highlight.Name = "KTL5_Chams"
-            highlight.FillColor = Color3.fromRGB(255, 255, 255)
-            highlight.FillTransparency = 0.6
-            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-            highlight.OutlineTransparency = 0
+            local h = Instance.new("Highlight", player.Character)
+            h.Name = "KTL5_Chams"
+            h.FillColor = Color3.fromRGB(255,255,255) h.FillTransparency = 0.6
+            h.OutlineColor = Color3.fromRGB(255,255,255) h.OutlineTransparency = 0
         end
     end
 
     -- COMBAT TAB
     Tabs.Main:AddSection("Targeting")
-    local AimToggle = Tabs.Main:AddToggle("AimLockToggle", {Title = "AimLock (G Key)", Default = false })
+    local AimToggle = Tabs.Main:AddToggle("AimLockToggle", {Title = "AimLock (G Key)", Default = false})
     AimToggle:OnChanged(function() _G.AimLock_Enabled = AimToggle.Value end)
-    Tabs.Main:AddSlider("AimSmooth", {Title = "Smoothness", Default = 0.5, Min = 0.1, Max = 2, Rounding = 1, Callback = function(v) _G.AimLock_Smoothness = v end})
-    Tabs.Main:AddSlider("AimRadius", {Title = "Aim Radius / FOV", Default = 150, Min = 50, Max = 800, Rounding = 0, Callback = function(v) _G.AimLock_Radius = v FOVCircle.Radius = v end})
+    Tabs.Main:AddSlider("AimSmooth", {Title="Smoothness",       Default=0.5, Min=0.1, Max=2,   Rounding=1, Callback=function(v) _G.AimLock_Smoothness=v end})
+    Tabs.Main:AddSlider("AimRadius", {Title="Aim Radius / FOV", Default=150, Min=50,  Max=800, Rounding=0, Callback=function(v) _G.AimLock_Radius=v FOVCircle.Radius=v end})
 
     Tabs.Main:AddSection("Blox Fruits Special")
-    Tabs.Main:AddToggle("DashBoostToggle", {Title = "Dash Boost Distance", Default = false }):OnChanged(function(v) _G.DashBoost_Enabled = v end)
-    Tabs.Main:AddSlider("DashBoostSlider", {Title = "Dash Distance Multiplier", Min = 1, Max = 10, Default = 5, Rounding = 1, Callback = function(v) _G.DashBoost_Multiplier = v end})
+    Tabs.Main:AddToggle("DashBoostToggle",{Title="Dash Boost Distance",   Default=false}):OnChanged(function(v) _G.DashBoost_Enabled=v end)
+    Tabs.Main:AddSlider("DashBoostSlider",{Title="Dash Distance Multiplier",Min=1,Max=10,Default=5,Rounding=1,Callback=function(v) _G.DashBoost_Multiplier=v end})
 
     Tabs.Main:AddSection("Movement")
-    Tabs.Main:AddSlider("WalkSpeed", {Title = "WalkSpeed", Min = 16, Max = 250, Default = 16, Rounding = 0, Callback = function(v) pcall(function() LocalPlayer.Character.Humanoid.WalkSpeed = v end) end})
+    Tabs.Main:AddSlider("WalkSpeed",{Title="WalkSpeed",Min=16,Max=250,Default=16,Rounding=0,Callback=function(v) pcall(function() LocalPlayer.Character.Humanoid.WalkSpeed=v end) end})
 
-    local FlyToggle = Tabs.Main:AddToggle("FlyToggle", {Title = "Super Smooth Fly (V Key)", Default = false })
-    FlyToggle:OnChanged(function(v)
-        _G.FlyEnabled = v
-        if not v then CleanUpFly() end
-    end)
-    Tabs.Main:AddSlider("FlySpeed", {Title = "Fly Speed", Min = 10, Max = 300, Default = 50, Rounding = 0, Callback = function(v) _G.FlySpeed = v end})
+    local FlyToggle = Tabs.Main:AddToggle("FlyToggle", {Title="Super Smooth Fly (V Key)", Default=false})
+    FlyToggle:OnChanged(function(v) _G.FlyEnabled=v if not v then CleanUpFly() end end)
+    Tabs.Main:AddSlider("FlySpeed",{Title="Fly Speed",Min=10,Max=300,Default=50,Rounding=0,Callback=function(v) _G.FlySpeed=v end})
 
-    Tabs.Main:AddToggle("TPWalkToggle", {Title = "Enable TP Walk", Default = false }):OnChanged(function(v) _G.TPWalkEnabled = v end)
-    Tabs.Main:AddSlider("TPWalkSpeed", {Title = "TP Walk Speed", Min = 0.1, Max = 5, Default = 0.5, Rounding = 1, Callback = function(v) _G.TPWalkSpeed = v end})
+    Tabs.Main:AddToggle("TPWalkToggle",{Title="Enable TP Walk", Default=false}):OnChanged(function(v) _G.TPWalkEnabled=v end)
+    Tabs.Main:AddSlider("TPWalkSpeed", {Title="TP Walk Speed",  Min=0.1,Max=5,Default=0.5,Rounding=1,Callback=function(v) _G.TPWalkSpeed=v end})
 
     Tabs.Main:AddSection("Physics")
-    Tabs.Main:AddToggle("ClickTP", {Title = "Click TP (Ctrl + Click)", Default = false }):OnChanged(function(v) _G.ClickTP_Enabled = v end)
-    Tabs.Main:AddToggle("InfJump", {Title = "Infinite Jump", Default = false }):OnChanged(function(v) _G.InfJump = v end)
-    Tabs.Main:AddToggle("Noclip", {Title = "Noclip Bypass", Default = false }):OnChanged(function(v) _G.Noclip = v end)
+    Tabs.Main:AddToggle("ClickTP", {Title="Click TP (Ctrl + Click)",Default=false}):OnChanged(function(v) _G.ClickTP_Enabled=v end)
+    Tabs.Main:AddToggle("InfJump", {Title="Infinite Jump",           Default=false}):OnChanged(function(v) _G.InfJump=v end)
+    Tabs.Main:AddToggle("Noclip",  {Title="Noclip Bypass",           Default=false}):OnChanged(function(v) _G.Noclip=v end)
 
     -- VISUALS TAB
     Tabs.Visuals:AddSection("ESP Players")
-    Tabs.Visuals:AddToggle("ESPNames", {Title = "Show Usernames", Default = false }):OnChanged(function(v)
-        _G.ESP_Names = v
-        if not v then
-            for _, p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("KTL5_NameTag") then p.Character.KTL5_NameTag:Destroy() end end
-        end
+    Tabs.Visuals:AddToggle("ESPNames",{Title="Show Usernames",Default=false}):OnChanged(function(v)
+        _G.ESP_Names=v
+        if not v then for _,p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("KTL5_NameTag") then p.Character.KTL5_NameTag:Destroy() end end end
     end)
-    Tabs.Visuals:AddToggle("ESPChams", {Title = "Chams Outline", Default = false }):OnChanged(function(v)
-        _G.ESP_Chams = v
-        if not v then
-            for _, p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("KTL5_Chams") then p.Character.KTL5_Chams:Destroy() end end
-        end
+    Tabs.Visuals:AddToggle("ESPChams",{Title="Chams Outline",Default=false}):OnChanged(function(v)
+        _G.ESP_Chams=v
+        if not v then for _,p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("KTL5_Chams") then p.Character.KTL5_Chams:Destroy() end end end
     end)
 
     Tabs.Visuals:AddSection("Camera & HUD")
-    Tabs.Visuals:AddToggle("ShowFOV", {Title = "Show Aim Fov Circle", Default = false }):OnChanged(function(v) FOVCircle.Visible = v end)
-    local CamNoclipToggle = Tabs.Visuals:AddToggle("CamNoclip", {Title = "Camera Noclip (CapsLock)", Default = false })
-    CamNoclipToggle:OnChanged(function(v) _G.CameraNoclip = v end)
-
-    Tabs.Visuals:AddSlider("MaxZoom", {Title = "Max Zoom Distance", Min = 12.5, Max = 5000, Default = 12.5, Rounding = 0, Callback = function(v) LocalPlayer.CameraMaxZoomDistance = v end})
-    Tabs.Visuals:AddSlider("FOV", {Title = "Field of View", Min = 70, Max = 120, Default = 70, Rounding = 0, Callback = function(v) Camera.FieldOfView = v end})
+    Tabs.Visuals:AddToggle("ShowFOV",{Title="Show Aim Fov Circle",Default=false}):OnChanged(function(v) FOVCircle.Visible=v end)
+    local CamNoclipToggle = Tabs.Visuals:AddToggle("CamNoclip",{Title="Camera Noclip (CapsLock)",Default=false})
+    CamNoclipToggle:OnChanged(function(v) _G.CameraNoclip=v end)
+    Tabs.Visuals:AddSlider("MaxZoom",{Title="Max Zoom Distance",Min=12.5,Max=5000,Default=12.5,Rounding=0,Callback=function(v) LocalPlayer.CameraMaxZoomDistance=v end})
+    Tabs.Visuals:AddSlider("FOV",    {Title="Field of View",    Min=70,  Max=120,  Default=70,  Rounding=0,Callback=function(v) Camera.FieldOfView=v end})
 
     Tabs.Visuals:AddSection("Environment")
-    Tabs.Visuals:AddToggle("Fullbright", {Title = "Force Brightness", Default = false }):OnChanged(function(v)
-        Lighting.Ambient = v and Color3.fromRGB(255, 255, 255) or OriginalAmbient
+    Tabs.Visuals:AddToggle("Fullbright",{Title="Force Brightness",Default=false}):OnChanged(function(v)
+        Lighting.Ambient    = v and Color3.fromRGB(255,255,255) or OriginalAmbient
         Lighting.Brightness = v and 2 or OriginalBrightness
     end)
 
     -- MM2 TAB
     Tabs.MM2:AddSection("Role Detection")
-    local MM2Toggle = Tabs.MM2:AddToggle("MM2ESP", {Title = "MM2 Role ESP (Chams)", Default = false })
+    local MM2Toggle = Tabs.MM2:AddToggle("MM2ESP",{Title="MM2 Role ESP (Chams)",Default=false})
     MM2Toggle:OnChanged(function()
         _G.MM2_ESP = MM2Toggle.Value
-        if not _G.MM2_ESP then
-            for _, p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("MM2_Highlight") then p.Character.MM2_Highlight:Destroy() end end
-        end
+        if not _G.MM2_ESP then for _,p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("MM2_Highlight") then p.Character.MM2_Highlight:Destroy() end end end
     end)
 
     -- TOOLS TAB
     Tabs.World:AddSection("Server Management")
-    Tabs.World:AddButton({Title = "Rejoin Server", Callback = function() TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer) end})
-    Tabs.World:AddToggle("AntiAFK", {Title = "Bypass AFK", Default = false }):OnChanged(function(v) _G.AntiAFK = v end)
+    Tabs.World:AddButton({Title="Rejoin Server",Callback=function() TeleportService:TeleportToPlaceInstance(game.PlaceId,game.JobId,LocalPlayer) end})
+    Tabs.World:AddToggle("AntiAFK",{Title="Bypass AFK",Default=false}):OnChanged(function(v) _G.AntiAFK=v end)
 
     Tabs.World:AddSection("External Modules")
-    Tabs.World:AddButton({Title = "Onion PVP", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/onion132005-bit/test0.02/refs/heads/main/onion13v6.lua"))() end})
-    Tabs.World:AddButton({Title = "Infinite Yield", Callback = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))() end})
-    Tabs.World:AddButton({Title = "Omega French Voice", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Omegascriptes/French-Voice/refs/heads/main/FrenchVoice.txt"))() end})
-    Tabs.World:AddButton({Title = "Emote FE Gui", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Rootleak/roblox/refs/heads/main/main.lua"))() end})
-    Tabs.World:AddButton({Title = "FE Fling TrollGUI", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/KPG5hjqb"))() end})
-    Tabs.World:AddButton({Title = "Spectate Player", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/h1AtSQTL"))() end})
-    Tabs.World:AddButton({Title = "Teleport to Player", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/ZLywntB5"))() end})
+    Tabs.World:AddButton({Title="Onion PVP",          Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/onion132005-bit/test0.02/refs/heads/main/onion13v6.lua"))() end})
+    Tabs.World:AddButton({Title="Infinite Yield",     Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))() end})
+    Tabs.World:AddButton({Title="Omega French Voice", Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Omegascriptes/French-Voice/refs/heads/main/FrenchVoice.txt"))() end})
+    Tabs.World:AddButton({Title="Emote FE Gui",       Callback=function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Rootleak/roblox/refs/heads/main/main.lua"))() end})
+    Tabs.World:AddButton({Title="FE Fling TrollGUI",  Callback=function() loadstring(game:HttpGet("https://pastebin.com/raw/KPG5hjqb"))() end})
+    Tabs.World:AddButton({Title="Spectate Player",    Callback=function() loadstring(game:HttpGet("https://pastebin.com/raw/h1AtSQTL"))() end})
+    Tabs.World:AddButton({Title="Teleport to Player", Callback=function() loadstring(game:HttpGet("https://pastebin.com/raw/ZLywntB5"))() end})
 
     Tabs.World:AddButton({
         Title = "Inject Change Visibility",
@@ -232,7 +273,7 @@ local success, err = pcall(function()
         end
     })
 
-    -- CORE LOGIC (ESP / MM2)
+    -- CORE LOOP
     task.spawn(function()
         while task.wait(1) do
             if not _G.KTL5_Running then break end
@@ -242,14 +283,13 @@ local success, err = pcall(function()
                     if _G.ESP_Chams then CreateChams(p) end
                     if _G.MM2_ESP then
                         local role = "Innocent"
-                        if p.Backpack:FindFirstChild("Knife") or p.Character:FindFirstChild("Knife") then role = "Murderer"
-                        elseif p.Backpack:FindFirstChild("Gun") or p.Character:FindFirstChild("Gun") then role = "Sheriff" end
-                        local h = p.Character:FindFirstChild("MM2_Highlight") or Instance.new("Highlight", p.Character)
-                        h.Name = "MM2_Highlight"
-                        h.FillTransparency = 0.5
-                        if role == "Murderer" then h.FillColor = Color3.fromRGB(255, 0, 0)
-                        elseif role == "Sheriff" then h.FillColor = Color3.fromRGB(0, 0, 255)
-                        else h.FillColor = Color3.fromRGB(0, 255, 0) end
+                        if p.Backpack:FindFirstChild("Knife") or p.Character:FindFirstChild("Knife") then role="Murderer"
+                        elseif p.Backpack:FindFirstChild("Gun") or p.Character:FindFirstChild("Gun") then role="Sheriff" end
+                        local h = p.Character:FindFirstChild("MM2_Highlight") or Instance.new("Highlight",p.Character)
+                        h.Name="MM2_Highlight" h.FillTransparency=0.5
+                        if role=="Murderer" then h.FillColor=Color3.fromRGB(255,0,0)
+                        elseif role=="Sheriff" then h.FillColor=Color3.fromRGB(0,0,255)
+                        else h.FillColor=Color3.fromRGB(0,255,0) end
                     end
                 end
             end
@@ -278,19 +318,15 @@ local success, err = pcall(function()
             local vel = hrp.Velocity
             if vel.Magnitude > 75 and not isDashing then
                 isDashing = true
-                local dashDirection = vel.Unit
-                local boostVelocity = Instance.new("BodyVelocity")
-                boostVelocity.MaxForce = Vector3.new(100000, 0, 100000)
-                boostVelocity.Velocity = dashDirection * (vel.Magnitude * 1.5)
-                boostVelocity.Parent = hrp
-                local duration = _G.DashBoost_Multiplier * 0.05
-                task.wait(duration)
-                if boostVelocity and boostVelocity.Parent then
-                    for i = 1, 5 do
-                        boostVelocity.Velocity = boostVelocity.Velocity * 0.6
-                        task.wait(0.02)
-                    end
-                    boostVelocity:Destroy()
+                local dir = vel.Unit
+                local bv = Instance.new("BodyVelocity")
+                bv.MaxForce = Vector3.new(100000,0,100000)
+                bv.Velocity = dir * (vel.Magnitude * 1.5)
+                bv.Parent = hrp
+                task.wait(_G.DashBoost_Multiplier * 0.05)
+                if bv and bv.Parent then
+                    for i=1,5 do bv.Velocity=bv.Velocity*0.6 task.wait(0.02) end
+                    bv:Destroy()
                 end
                 task.wait(0.3)
                 isDashing = false
@@ -299,111 +335,109 @@ local success, err = pcall(function()
     end)
 
     -- =============================================
-    --      RENDER STEPPED - FLY ULTRA SMOOTH
+    --    RENDER STEPPED — FLY SMOOTH + COLLISIONS
     -- =============================================
     RunService.RenderStepped:Connect(function(deltaTime)
         if not _G.KTL5_Running then return end
 
-        -- AimLock
         if _G.AimLock_Enabled and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             local t = GetClosestPlayer()
             if t and t.Character and t.Character:FindFirstChild("HumanoidRootPart") and mousemoverel then
                 local pos = Camera:WorldToViewportPoint(t.Character.HumanoidRootPart.Position)
-                local mouseLoc = UIS:GetMouseLocation()
-                mousemoverel((pos.X - mouseLoc.X) * _G.AimLock_Smoothness, (pos.Y - mouseLoc.Y) * _G.AimLock_Smoothness)
+                local ml = UIS:GetMouseLocation()
+                mousemoverel((pos.X-ml.X)*_G.AimLock_Smoothness, (pos.Y-ml.Y)*_G.AimLock_Smoothness)
             end
         end
         FOVCircle.Position = UIS:GetMouseLocation()
 
-        -- =========================================
-        --   FLY LOGIC ULTRA SMOOTH
-        -- =========================================
+        -- =============================================
+        --   FLY LOGIC — SMOOTH (code précédent)
+        --   + COLLISION SLIDE sur murs et sol
+        -- =============================================
         if _G.FlyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = LocalPlayer.Character.HumanoidRootPart
             local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 
-            -- Initialisation des objets physiques
             if not hrp:FindFirstChild("KTL5_FlyBV") then
                 if hum then hum.PlatformStand = true end
 
                 flyBodyVelocity = Instance.new("BodyVelocity")
                 flyBodyVelocity.Name = "KTL5_FlyBV"
-                flyBodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
+                flyBodyVelocity.MaxForce = Vector3.new(100000,100000,100000)
                 flyBodyVelocity.Velocity = Vector3.zero
                 flyBodyVelocity.Parent = hrp
 
                 flyBodyGyro = Instance.new("BodyGyro")
                 flyBodyGyro.Name = "KTL5_FlyBG"
-                flyBodyGyro.MaxTorque = Vector3.new(100000, 100000, 100000)
-                -- P bas + D élevé = rotation très douce, pas de tremblements cam
+                flyBodyGyro.MaxTorque = Vector3.new(100000,100000,100000)
                 flyBodyGyro.P = 2500
                 flyBodyGyro.D = 400
                 flyBodyGyro.CFrame = Camera.CFrame
                 flyBodyGyro.Parent = hrp
 
-                -- Initialise les vecteurs lissés sur la cam actuelle
-                smoothedLookVector = Camera.CFrame.LookVector
+                smoothedLookVector  = Camera.CFrame.LookVector
                 smoothedRightVector = Camera.CFrame.RightVector
-                currentFlyVelocity = Vector3.zero
+                currentFlyVelocity  = Vector3.zero
             end
 
             if flyBodyVelocity and flyBodyGyro and flyBodyGyro.Parent == hrp then
                 if hum then hum.PlatformStand = true end
 
-                -- -----------------------------------------------
-                -- LISSAGE de la direction caméra (évite les saccades
-                -- quand on bouge la souris rapidement)
-                -- 0.12 = très doux, 0.25 = un peu plus réactif
-                -- -----------------------------------------------
-                local camLerpFactor = math.clamp(deltaTime * 18, 0, 1)
-                smoothedLookVector = smoothedLookVector:Lerp(Camera.CFrame.LookVector, camLerpFactor)
-                smoothedRightVector = smoothedRightVector:Lerp(Camera.CFrame.RightVector, camLerpFactor)
+                -- Lissage direction caméra (évite saccades souris)
+                local cf = math.clamp(deltaTime * 18, 0, 1)
+                smoothedLookVector  = smoothedLookVector:Lerp(Camera.CFrame.LookVector,  cf)
+                smoothedRightVector = smoothedRightVector:Lerp(Camera.CFrame.RightVector, cf)
+                flyBodyGyro.CFrame  = CFrame.new(Vector3.zero, smoothedLookVector)
 
-                -- Gyro suit la cam lissée → pas de rotation brusque du perso
-                flyBodyGyro.CFrame = CFrame.new(Vector3.zero, smoothedLookVector)
-
-                -- Calcul de la direction de mouvement souhaitée
+                -- Direction souhaitée
                 local moveDir = Vector3.zero
-                if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + smoothedLookVector end
-                if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - smoothedLookVector end
-                if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - smoothedRightVector end
-                if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + smoothedRightVector end
-                if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-                if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+                if UIS:IsKeyDown(Enum.KeyCode.W)            then moveDir = moveDir + smoothedLookVector end
+                if UIS:IsKeyDown(Enum.KeyCode.S)            then moveDir = moveDir - smoothedLookVector end
+                if UIS:IsKeyDown(Enum.KeyCode.A)            then moveDir = moveDir - smoothedRightVector end
+                if UIS:IsKeyDown(Enum.KeyCode.D)            then moveDir = moveDir + smoothedRightVector end
+                if UIS:IsKeyDown(Enum.KeyCode.Space)        then moveDir = moveDir + Vector3.new(0,1,0) end
+                if UIS:IsKeyDown(Enum.KeyCode.LeftControl)  then moveDir = moveDir - Vector3.new(0,1,0) end
 
-                local targetVelocity
-                if moveDir.Magnitude > 0 then
-                    targetVelocity = moveDir.Unit * _G.FlySpeed
-                else
-                    targetVelocity = Vector3.zero
-                end
+                local targetVelocity = moveDir.Magnitude > 0
+                    and moveDir.Unit * _G.FlySpeed
+                    or Vector3.zero
 
-                -- -----------------------------------------------
-                -- LERP ASYMÉTRIQUE :
-                --   Accélération rapide  → deltaTime * 7
-                --   Décélération douce   → deltaTime * 3  (glissement)
-                -- -----------------------------------------------
-                local isMoving = moveDir.Magnitude > 0
+                -- Lerp asymétrique (accél rapide, décél glissante)
+                local isMoving  = moveDir.Magnitude > 0
                 local lerpSpeed = isMoving and (deltaTime * 7) or (deltaTime * 3)
                 currentFlyVelocity = currentFlyVelocity:Lerp(targetVelocity, math.clamp(lerpSpeed, 0, 1))
 
-                flyBodyVelocity.Velocity = currentFlyVelocity
-            end
+                -- ─────────────────────────────────────────
+                --   COLLISION SLIDE
+                --   On passe la vélocité dans le filtre
+                --   de collision → elle est redirigée le
+                --   long des surfaces au lieu de bloquer
+                -- ─────────────────────────────────────────
+                local safeVelocity = ApplyCollisionSlide(hrp, currentFlyVelocity)
 
-        end -- fin FlyEnabled
+                -- Si la collision a changé la vélocité, on
+                -- met à jour currentFlyVelocity pour ne pas
+                -- "accumuler" de la vitesse dans le mur
+                if safeVelocity ~= currentFlyVelocity then
+                    currentFlyVelocity = safeVelocity
+                end
+
+                flyBodyVelocity.Velocity = safeVelocity
+            end
+        end
 
         -- TP Walk
         if _G.TPWalkEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if hum and hum.MoveDirection.Magnitude > 0 then
-                LocalPlayer.Character.HumanoidRootPart.CFrame += (hum.MoveDirection * _G.TPWalkSpeed * 0.1)
+                LocalPlayer.Character.HumanoidRootPart.CFrame += hum.MoveDirection * _G.TPWalkSpeed * 0.1
             end
         end
     end)
 
     UIS.InputBegan:Connect(function(i, gp)
         if gp or not _G.KTL5_Running then return end
-        if i.KeyCode == Enum.KeyCode.G then _G.AimLock_Enabled = not _G.AimLock_Enabled AimToggle:SetValue(_G.AimLock_Enabled) end
+        if i.KeyCode == Enum.KeyCode.G        then _G.AimLock_Enabled = not _G.AimLock_Enabled AimToggle:SetValue(_G.AimLock_Enabled) end
         if i.KeyCode == Enum.KeyCode.CapsLock then _G.CameraNoclip = not _G.CameraNoclip CamNoclipToggle:SetValue(_G.CameraNoclip) end
         if i.KeyCode == Enum.KeyCode.V then
             _G.FlyEnabled = not _G.FlyEnabled
@@ -412,7 +446,7 @@ local success, err = pcall(function()
         end
         if _G.ClickTP_Enabled and i.UserInputType == Enum.UserInputType.MouseButton1 and UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
             if LocalPlayer.Character then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p + Vector3.new(0, 3, 0))
+                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p + Vector3.new(0,3,0))
             end
         end
     end)
@@ -439,8 +473,8 @@ local success, err = pcall(function()
             for _, p in pairs(Players:GetPlayers()) do
                 if p.Character then
                     if p.Character:FindFirstChild("MM2_Highlight") then p.Character.MM2_Highlight:Destroy() end
-                    if p.Character:FindFirstChild("KTL5_NameTag") then p.Character.KTL5_NameTag:Destroy() end
-                    if p.Character:FindFirstChild("KTL5_Chams") then p.Character.KTL5_Chams:Destroy() end
+                    if p.Character:FindFirstChild("KTL5_NameTag")  then p.Character.KTL5_NameTag:Destroy()  end
+                    if p.Character:FindFirstChild("KTL5_Chams")    then p.Character.KTL5_Chams:Destroy()    end
                 end
             end
             Window:Destroy()
@@ -449,5 +483,5 @@ local success, err = pcall(function()
 
     Window:SelectTab(1)
     SaveManager:LoadAutoloadConfig()
-    Fluent:Notify({Title = "ktl5 hub", Content = "Script prêt avec Super Smooth Fly (Touche V) !", Duration = 5})
+    Fluent:Notify({Title="ktl5 hub", Content="Script prêt — Fly smooth + collisions (Touche V) !", Duration=5})
 end)
