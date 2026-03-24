@@ -46,6 +46,8 @@ local success, err = pcall(function()
     _G.AimLock_Radius = 150
     _G.TPWalkEnabled = false
     _G.TPWalkSpeed = 0.5
+    _G.FlyEnabled = false
+    _G.FlySpeed = 50
     _G.DashBoost_Enabled = false
     _G.DashBoost_Multiplier = 5
     _G.ClickTP_Enabled = false
@@ -66,6 +68,22 @@ local success, err = pcall(function()
     }
 
     -- --- UTILS FUNCTIONS ---
+    local flyBodyVelocity, flyBodyGyro
+    local function CleanUpFly()
+        if flyBodyVelocity then flyBodyVelocity:Destroy() flyBodyVelocity = nil end
+        if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = LocalPlayer.Character.HumanoidRootPart
+            local oldBv = hrp:FindFirstChild("KTL5_FlyBV")
+            if oldBv then oldBv:Destroy() end
+            local oldBg = hrp:FindFirstChild("KTL5_FlyBG")
+            if oldBg then oldBg:Destroy() end
+        end
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").PlatformStand = false
+        end
+    end
+
     local function GetClosestPlayer()
         local closestPlayer = nil
         local shortestDistance = _G.AimLock_Radius
@@ -131,6 +149,14 @@ local success, err = pcall(function()
 
     Tabs.Main:AddSection("Movement")
     Tabs.Main:AddSlider("WalkSpeed", {Title = "WalkSpeed", Min = 16, Max = 250, Default = 16, Rounding = 0, Callback = function(v) pcall(function() LocalPlayer.Character.Humanoid.WalkSpeed = v end) end})
+    
+    local FlyToggle = Tabs.Main:AddToggle("FlyToggle", {Title = "Smooth Fly (V Key)", Default = false })
+    FlyToggle:OnChanged(function(v) 
+        _G.FlyEnabled = v 
+        if not v then CleanUpFly() end
+    end)
+    Tabs.Main:AddSlider("FlySpeed", {Title = "Fly Speed", Min = 10, Max = 300, Default = 50, Rounding = 0, Callback = function(v) _G.FlySpeed = v end})
+
     Tabs.Main:AddToggle("TPWalkToggle", {Title = "Enable TP Walk", Default = false }):OnChanged(function(v) _G.TPWalkEnabled = v end)
     Tabs.Main:AddSlider("TPWalkSpeed", {Title = "TP Walk Speed", Min = 0.1, Max = 5, Default = 0.5, Rounding = 1, Callback = function(v) _G.TPWalkSpeed = v end})
 
@@ -184,13 +210,14 @@ local success, err = pcall(function()
     Tabs.World:AddToggle("AntiAFK", {Title = "Bypass AFK", Default = false }):OnChanged(function(v) _G.AntiAFK = v end)
 
     Tabs.World:AddSection("External Modules")
-    Tabs.World:AddButton({Title = "Inject Onion PVP", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/onion132005-bit/test0.02/refs/heads/main/onion13v6.lua"))() end})
-    Tabs.World:AddButton({Title = "Inject Infinite Yield", Callback = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))() end})
-    Tabs.World:AddButton({Title = "Inject Omega French Voice", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Omegascriptes/French-Voice/refs/heads/main/FrenchVoice.txt"))() end})
+    Tabs.World:AddButton({Title = "Onion PVP", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/onion132005-bit/test0.02/refs/heads/main/onion13v6.lua"))() end})
+    Tabs.World:AddButton({Title = "Infinite Yield", Callback = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))() end})
+    Tabs.World:AddButton({Title = "Omega French Voice", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Omegascriptes/French-Voice/refs/heads/main/FrenchVoice.txt"))() end})
     
-    -- Nouveaux scripts ajoutés
     Tabs.World:AddButton({Title = "Emote FE Gui", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Rootleak/roblox/refs/heads/main/main.lua"))() end})
     Tabs.World:AddButton({Title = "FE Fling TrollGUI", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/KPG5hjqb"))() end})
+    Tabs.World:AddButton({Title = "Spectate Player", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/h1AtSQTL"))() end})
+    Tabs.World:AddButton({Title = "Teleport to Player", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/ZLywntB5"))() end})
 
     Tabs.World:AddButton({
         Title = "Inject Change Visibility",
@@ -274,6 +301,47 @@ local success, err = pcall(function()
             end
         end
         FOVCircle.Position = UIS:GetMouseLocation()
+        
+        -- Smooth Fly Logic
+        if _G.FlyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = LocalPlayer.Character.HumanoidRootPart
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            
+            if not hrp:FindFirstChild("KTL5_FlyBV") then
+                if hum then hum.PlatformStand = true end
+                flyBodyVelocity = Instance.new("BodyVelocity")
+                flyBodyVelocity.Name = "KTL5_FlyBV"
+                flyBodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
+                flyBodyVelocity.Velocity = Vector3.zero
+                flyBodyVelocity.Parent = hrp
+
+                flyBodyGyro = Instance.new("BodyGyro")
+                flyBodyGyro.Name = "KTL5_FlyBG"
+                flyBodyGyro.MaxTorque = Vector3.new(100000, 100000, 100000)
+                flyBodyGyro.P = 10000
+                flyBodyGyro.CFrame = Camera.CFrame
+                flyBodyGyro.Parent = hrp
+            end
+            
+            if flyBodyVelocity and flyBodyGyro and flyBodyGyro.Parent == hrp then
+                if hum then hum.PlatformStand = true end
+                flyBodyGyro.CFrame = Camera.CFrame
+                
+                local moveDir = Vector3.new()
+                if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
+                if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
+                if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
+                if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
+                if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+                if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+
+                if moveDir.Magnitude > 0 then
+                    moveDir = moveDir.Unit
+                end
+                flyBodyVelocity.Velocity = moveDir * _G.FlySpeed
+            end
+        end
+
         if _G.TPWalkEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if hum and hum.MoveDirection.Magnitude > 0 then LocalPlayer.Character.HumanoidRootPart.CFrame += (hum.MoveDirection * _G.TPWalkSpeed * 0.1) end
@@ -284,6 +352,14 @@ local success, err = pcall(function()
         if gp or not _G.KTL5_Running then return end
         if i.KeyCode == Enum.KeyCode.G then _G.AimLock_Enabled = not _G.AimLock_Enabled AimToggle:SetValue(_G.AimLock_Enabled) end
         if i.KeyCode == Enum.KeyCode.CapsLock then _G.CameraNoclip = not _G.CameraNoclip CamNoclipToggle:SetValue(_G.CameraNoclip) end
+        
+        -- Fly Keybind (V)
+        if i.KeyCode == Enum.KeyCode.V then 
+            _G.FlyEnabled = not _G.FlyEnabled 
+            FlyToggle:SetValue(_G.FlyEnabled)
+            if not _G.FlyEnabled then CleanUpFly() end
+        end
+
         if _G.ClickTP_Enabled and i.UserInputType == Enum.UserInputType.MouseButton1 and UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
             if LocalPlayer.Character then LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(Mouse.Hit.p + Vector3.new(0, 3, 0)) end
         end
@@ -301,6 +377,8 @@ local success, err = pcall(function()
         Title = "Unload Script",
         Callback = function()
             _G.KTL5_Running = false
+            _G.FlyEnabled = false
+            CleanUpFly()
             FOVCircle:Destroy()
             Lighting.Ambient, Lighting.Brightness, Camera.FieldOfView, LocalPlayer.CameraMaxZoomDistance = OriginalAmbient, OriginalBrightness, OriginalFOV, OriginalZoom
             for _, p in pairs(Players:GetPlayers()) do
@@ -316,5 +394,5 @@ local success, err = pcall(function()
 
     Window:SelectTab(1)
     SaveManager:LoadAutoloadConfig()
-    Fluent:Notify({Title = "ktl5 hub", Content = "Script prêt avec modules externes !", Duration = 5})
+    Fluent:Notify({Title = "ktl5 hub", Content = "Script prêt avec Smooth Fly (Touche V) !", Duration = 5})
 end)
