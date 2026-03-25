@@ -265,9 +265,10 @@ Tabs.World:AddButton({Title="Emote FE Gui",       Callback=function() loadstring
 Tabs.World:AddButton({Title="FE Fling TrollGUI",  Callback=function() loadstring(game:HttpGet("https://pastebin.com/raw/KPG5hjqb"))() end})
 Tabs.World:AddButton({Title="Spectate Player",    Callback=function() loadstring(game:HttpGet("https://pastebin.com/raw/h1AtSQTL"))() end})
 Tabs.World:AddButton({Title="Teleport to Player", Callback=function() loadstring(game:HttpGet("https://pastebin.com/raw/ZLywntB5"))() end})
+Tabs.World:AddButton({Title="Invisible V1", Callback=function() loadstring(game:HttpGet("https://pastebin.com/raw/0EjRGNQ8"))() end})
 
 Tabs.World:AddButton({
-    Title = "Inject Change Visibility",
+    Title = "Invisible V2",
     Callback = function()
         loadstring(game:HttpGet("https://pastebin.com/raw/c3WsCLEG"))()
     end
