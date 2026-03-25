@@ -265,7 +265,9 @@ Tabs.World:AddButton({Title="Emote FE Gui",       Callback=function() loadstring
 Tabs.World:AddButton({Title="FE Fling TrollGUI",  Callback=function() loadstring(game:HttpGet("https://pastebin.com/raw/KPG5hjqb"))() end})
 Tabs.World:AddButton({Title="Spectate Player",    Callback=function() loadstring(game:HttpGet("https://pastebin.com/raw/h1AtSQTL"))() end})
 Tabs.World:AddButton({Title="Teleport to Player", Callback=function() loadstring(game:HttpGet("https://pastebin.com/raw/ZLywntB5"))() end})
+Tabs.World:AddButton({Title="Water Sound Spammer", Callback=function() loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/a4fc5ba15e9c8188f45aeab25a06e39c.lua"))() end})
 Tabs.World:AddButton({Title="Invisible V1", Callback=function() loadstring(game:HttpGet("https://pastebin.com/raw/0EjRGNQ8"))() end})
+
 
 Tabs.World:AddButton({
     Title = "Invisible V2",
