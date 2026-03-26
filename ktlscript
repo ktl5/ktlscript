@@ -37,6 +37,7 @@ _G.ESP_Names            = false
 _G.ESP_Chams            = false
 _G.MM2_ESP              = false
 _G.AntiAFK              = false
+_G.FOV                  = 70  -- Valeur par défaut pour la FOV
 
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 1
@@ -420,7 +421,7 @@ local SubLabel = Instance.new("TextLabel")
 SubLabel.Size = UDim2.new(1, -70, 1, 0)
 SubLabel.Position = UDim2.new(0, 28, 0, 14)
 SubLabel.BackgroundTransparency = 1
-SubLabel.Text = "Haku Version"
+SubLabel.Text = "Ultimate Version"
 SubLabel.TextColor3 = Color3.fromRGB(80, 160, 200)
 SubLabel.Font = Enum.Font.Gotham
 SubLabel.TextSize = 11
@@ -447,7 +448,8 @@ CloseBtn.MouseButton1Click:Connect(function()
     -- Sauvegarder la taille avant de fermer
     local data = {
         window_width = MainFrame.AbsoluteSize.X,
-        window_height = MainFrame.AbsoluteSize.Y
+        window_height = MainFrame.AbsoluteSize.Y,
+        fov = _G.FOV
     }
     local ok, encoded = pcall(HttpService.JSONEncode, HttpService, data)
     if ok then
@@ -1095,7 +1097,7 @@ createSection("Visual", "CAMERA & HUD")
 createToggle("Visual", "Show Aim FOV Circle", false, function(v) FOVCircle.Visible = v end, "showfov")
 local setCamNoclip = createToggle("Visual", "Camera Noclip  (CapsLock)", false, function(v) _G.CameraNoclip = v end, "camnoclip")
 createSlider("Visual", "Max Zoom Distance", 12.5, 5000, 12.5, 0, function(v) LocalPlayer.CameraMaxZoomDistance = v end, "maxzoom")
-createSlider("Visual", "Field of View",     70,   120,  70,   0, function(v) Camera.FieldOfView = v end, "fov")
+createSlider("Visual", "Field of View",     70,   120,  70,   0, function(v) _G.FOV = v end, "fov")
 
 createSection("Visual", "ENVIRONMENT")
 createToggle("Visual", "Force Fullbright", false, function(v)
@@ -1349,7 +1351,8 @@ UIS.InputChanged:Connect(function(input)
         -- Sauvegarder la taille après modification
         local data = {
             window_width = MainFrame.AbsoluteSize.X,
-            window_height = MainFrame.AbsoluteSize.Y
+            window_height = MainFrame.AbsoluteSize.Y,
+            fov = _G.FOV
         }
         local ok, encoded = pcall(HttpService.JSONEncode, HttpService, data)
         if ok then
@@ -1521,6 +1524,10 @@ end)
 
 RunService.RenderStepped:Connect(function(deltaTime)
     if not _G.KTL5_Running then return end
+
+    -- Force la FOV à chaque frame
+    Camera.FieldOfView = _G.FOV
+
     if _G.AimLock_Enabled and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
         local t = GetClosestPlayer()
         if t and t.Character and t.Character:FindFirstChild("HumanoidRootPart") and mousemoverel then
@@ -1610,28 +1617,7 @@ end)
 switchTab("Combat")
 refreshConfigList()
 
--- Autoload au démarrage
-task.delay(0.5, function()
-    local al = getAutoload()
-    if al and al ~= "" then
-        local ok = loadConfig(al)
-        if ok then
-            notify("Autoload ✓", al .. " chargé automatiquement", Color3.fromRGB(0, 200, 100))
-        end
-    else
-        -- Charger la taille sauvegardée
-        local ok, content = pcall(readfile, getConfigPath("default_size"))
-        if ok and content and content ~= "" then
-            local ok2, data = pcall(HttpService.JSONDecode, HttpService, content)
-            if ok2 and data and data.window_width and data.window_height then
-                MainFrame.Size = UDim2.new(0, data.window_width, 0, data.window_height)
-            end
-        end
-        notify("KTL5 Hub", "Script prêt — Fly smooth + collisions (V)", Color3.fromRGB(0, 160, 255))
-    end
-end)
-
--- Enregistrer la taille de la fenêtre dans le registre de sauvegarde
+-- Enregistrer la taille de la fenêtre et la FOV dans le registre de sauvegarde
 registerSaveable("window_width",
     function() return MainFrame.AbsoluteSize.X end,
     function(v) MainFrame.Size = UDim2.new(0, v, 0, MainFrame.AbsoluteSize.Y) end
@@ -1641,6 +1627,38 @@ registerSaveable("window_height",
     function() return MainFrame.AbsoluteSize.Y end,
     function(v) MainFrame.Size = UDim2.new(0, MainFrame.AbsoluteSize.X, 0, v) end
 )
+
+registerSaveable("fov",
+    function() return _G.FOV end,
+    function(v) _G.FOV = v end
+)
+
+-- Autoload au démarrage
+task.delay(0.5, function()
+    local al = getAutoload()
+    if al and al ~= "" then
+        local ok = loadConfig(al)
+        if ok then
+            notify("Autoload ✓", al .. " chargé automatiquement", Color3.fromRGB(0, 200, 100))
+        end
+    else
+        -- Charger la taille et la FOV sauvegardées
+        local ok, content = pcall(readfile, getConfigPath("default_size"))
+        if ok and content and content ~= "" then
+            local ok2, data = pcall(HttpService.JSONDecode, HttpService, content)
+            if ok2 and data then
+                if data.window_width and data.window_height then
+                    MainFrame.Size = UDim2.new(0, data.window_width, 0, data.window_height)
+                end
+                if data.fov then
+                    _G.FOV = data.fov
+                    Camera.FieldOfView = _G.FOV
+                end
+            end
+        end
+        notify("KTL5 Hub", "Script prêt — Fly smooth + collisions (V)", Color3.fromRGB(0, 160, 255))
+    end
+end)
 
 end)
 if err then warn("KTL5 Error: " .. tostring(err)) end
