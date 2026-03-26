@@ -60,7 +60,6 @@ pcall(function()
 end)
 
 -- Registre centralisé de tous les éléments sauvegardables
--- { key = string, getValue = fn, setValue = fn }
 local SaveRegistry = {}
 
 local function registerSaveable(key, getter, setter)
@@ -444,7 +443,18 @@ CloseBtn.Parent = TitleBar
 addCorner(CloseBtn, 8)
 CloseBtn.MouseEnter:Connect(function() tw(CloseBtn, {BackgroundTransparency = 0}, 0.15) end)
 CloseBtn.MouseLeave:Connect(function() tw(CloseBtn, {BackgroundTransparency = 0.4}, 0.15) end)
-CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
+CloseBtn.MouseButton1Click:Connect(function()
+    -- Sauvegarder la taille avant de fermer
+    local data = {
+        window_width = MainFrame.AbsoluteSize.X,
+        window_height = MainFrame.AbsoluteSize.Y
+    }
+    local ok, encoded = pcall(HttpService.JSONEncode, HttpService, data)
+    if ok then
+        pcall(writefile, getConfigPath("default_size"), encoded)
+    end
+    MainFrame.Visible = false
+end)
 
 -- ══════════════════════════════════════════════
 --              TAB BAR
@@ -1335,6 +1345,16 @@ UIS.InputChanged:Connect(function(input)
     if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - resizeStart
         MainFrame.Size = UDim2.new(0, clamp(startSize.X + delta.X, MIN_WIDTH, MAX_WIDTH), 0, clamp(startSize.Y + delta.Y, MIN_HEIGHT, MAX_HEIGHT))
+
+        -- Sauvegarder la taille après modification
+        local data = {
+            window_width = MainFrame.AbsoluteSize.X,
+            window_height = MainFrame.AbsoluteSize.Y
+        }
+        local ok, encoded = pcall(HttpService.JSONEncode, HttpService, data)
+        if ok then
+            pcall(writefile, getConfigPath("default_size"), encoded)
+        end
     end
 end)
 
@@ -1599,9 +1619,28 @@ task.delay(0.5, function()
             notify("Autoload ✓", al .. " chargé automatiquement", Color3.fromRGB(0, 200, 100))
         end
     else
+        -- Charger la taille sauvegardée
+        local ok, content = pcall(readfile, getConfigPath("default_size"))
+        if ok and content and content ~= "" then
+            local ok2, data = pcall(HttpService.JSONDecode, HttpService, content)
+            if ok2 and data and data.window_width and data.window_height then
+                MainFrame.Size = UDim2.new(0, data.window_width, 0, data.window_height)
+            end
+        end
         notify("KTL5 Hub", "Script prêt — Fly smooth + collisions (V)", Color3.fromRGB(0, 160, 255))
     end
 end)
+
+-- Enregistrer la taille de la fenêtre dans le registre de sauvegarde
+registerSaveable("window_width",
+    function() return MainFrame.AbsoluteSize.X end,
+    function(v) MainFrame.Size = UDim2.new(0, v, 0, MainFrame.AbsoluteSize.Y) end
+)
+
+registerSaveable("window_height",
+    function() return MainFrame.AbsoluteSize.Y end,
+    function(v) MainFrame.Size = UDim2.new(0, MainFrame.AbsoluteSize.X, 0, v) end
+)
 
 end)
 if err then warn("KTL5 Error: " .. tostring(err)) end
