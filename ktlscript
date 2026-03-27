@@ -663,7 +663,7 @@ local infoTab = tabFrames["Info"]
 if infoTab then
     -- Frame principale pour les infos utilisateur
     local userInfoFrame = Instance.new("Frame")
-    userInfoFrame.Size = UDim2.new(1, -20, 0, 300)
+    userInfoFrame.Size = UDim2.new(1, -20, 0, 450) -- ← agrandi pour les nouvelles infos
     userInfoFrame.Position = UDim2.new(0, 10, 0, 10)
     userInfoFrame.BackgroundColor3 = Color3.fromRGB(14, 18, 32)
     userInfoFrame.BorderSizePixel = 0
@@ -715,7 +715,7 @@ if infoTab then
 
     -- Frame pour contenir toutes les infos textuelles
     local infoContainer = Instance.new("Frame")
-    infoContainer.Size = UDim2.new(1, 0, 0, 150)
+    infoContainer.Size = UDim2.new(1, 0, 0, 300) -- ← agrandi
     infoContainer.Position = UDim2.new(0, 0, 0, 130)
     infoContainer.BackgroundTransparency = 1
     infoContainer.Parent = userInfoFrame
@@ -769,6 +769,38 @@ if infoTab then
     friendsLabel.TextXAlignment = Enum.TextXAlignment.Left
     friendsLabel.Parent = infoContainer
 
+    -- ✅ NOUVEAU : Place ID
+    local placeIdLabel = Instance.new("TextLabel")
+    placeIdLabel.Size = UDim2.new(1, 0, 0, 20)
+    placeIdLabel.BackgroundTransparency = 1
+    placeIdLabel.Text = "Place ID: " .. game.PlaceId
+    placeIdLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
+    placeIdLabel.Font = Enum.Font.GothamBold
+    placeIdLabel.TextSize = 14
+    placeIdLabel.TextXAlignment = Enum.TextXAlignment.Left
+    placeIdLabel.Parent = infoContainer
+
+    -- ✅ NOUVEAU : Nom de la place
+    local placeNameLabel = Instance.new("TextLabel")
+    placeNameLabel.Size = UDim2.new(1, 0, 0, 20)
+    placeNameLabel.BackgroundTransparency = 1
+    placeNameLabel.Text = "Place: " .. game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+    placeNameLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
+    placeNameLabel.Font = Enum.Font.GothamBold
+    placeNameLabel.TextSize = 14
+    placeNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    placeNameLabel.Parent = infoContainer
+
+    -- ✅ NOUVEAU : Image de la place
+    local placeImage = Instance.new("ImageLabel")
+    placeImage.Size = UDim2.new(1, 0, 0, 150)
+    placeImage.BackgroundColor3 = Color3.fromRGB(20, 26, 46)
+    placeImage.BorderSizePixel = 0
+    placeImage.Image = "https://www.roblox.com/asset-thumbnail/image?assetId=" .. game.PlaceId .. "&width=768&height=432&format=png"
+    placeImage.ScaleType = Enum.ScaleType.Fit
+    placeImage.Parent = infoContainer
+    addCorner(placeImage, 6)
+
     -- Charger le nombre d'amis de manière asynchrone
     task.spawn(function()
         local friendCount = getFriendCount(LocalPlayer.UserId)
@@ -778,7 +810,7 @@ if infoTab then
     -- Bouton pour copier l'ID utilisateur
     local copyIdButton = Instance.new("TextButton")
     copyIdButton.Size = UDim2.new(0, 120, 0, 30)
-    copyIdButton.Position = UDim2.new(0.5, -60, 0, 270)
+    copyIdButton.Position = UDim2.new(0.5, -60, 0, 410) -- ← décalé vers le bas
     copyIdButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
     copyIdButton.Text = "Copier ID"
     copyIdButton.TextColor3 = Color3.new(1, 1, 1)
