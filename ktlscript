@@ -1128,6 +1128,7 @@ createButton("Tools", "🔫  FE Fling TrollGUI",   function() loadstring(game:Ht
 createButton("Tools", "👁  Spectate Player",     function() loadstring(game:HttpGet("https://pastebin.com/raw/h1AtSQTL"))() end)
 createButton("Tools", "🌀  Teleport to Player",  function() loadstring(game:HttpGet("https://pastebin.com/raw/ZLywntB5"))() end)
 createButton("Tools", "🎥  FreeCam (H)",         function() loadstring(game:HttpGet("https://pastebin.com/raw/wZGFcerx"))() end)
+createButton("Tools", "🛠  Desync (CLONE)",         function() loadstring(game:HttpGet("https://pastebin.com/raw/CXUjzHiY"))() end)
 createButton("Tools", "🔊  Water Sound Spammer", function() loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/a4fc5ba15e9c8188f45aeab25a06e39c.lua"))() end)
 createButton("Tools", "👻  Invisible V1",        function() loadstring(game:HttpGet("https://pastebin.com/raw/0EjRGNQ8"))() end)
 createButton("Tools", "👻  Invisible V2",        function() loadstring(game:HttpGet("https://pastebin.com/raw/c3WsCLEG"))() end)
