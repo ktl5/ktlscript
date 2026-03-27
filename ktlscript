@@ -225,10 +225,10 @@ end
 -- ══════════════════════════════════════════════
 --              UI UTILITIES
 -- ══════════════════════════════════════════════
-local MIN_WIDTH  = 260
-local MIN_HEIGHT = 340
-local MAX_WIDTH  = 620
-local MAX_HEIGHT = 720
+local MIN_WIDTH  = 620   -- Taille minimale raisonnable
+local MIN_HEIGHT = 720   -- Taille minimale raisonnable
+local MAX_WIDTH  = 5000  -- Très grande valeur pour "pas de limite"
+local MAX_HEIGHT = 5000 -- Très grande valeur pour "pas de limite"
 
 local function addCorner(parent, radius)
     local c = Instance.new("UICorner")
@@ -265,6 +265,117 @@ ScreenGui.Name = "KTL5GUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+-- Notification de démarrage avec avatar et pseudo (version corrigée)
+local StartupNotification = Instance.new("Frame")
+StartupNotification.Name = "StartupNotification"
+StartupNotification.Size = UDim2.new(0, 300, 0, 70)
+StartupNotification.Position = UDim2.new(1, -310, 0.7, 0)  -- Position en haut à droite
+StartupNotification.BackgroundColor3 = Color3.fromRGB(14, 18, 32)
+StartupNotification.BorderSizePixel = 0
+StartupNotification.Parent = ScreenGui
+
+-- Coin arrondi
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = StartupNotification
+
+-- Bordure
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(0, 120, 215)
+UIStroke.Thickness = 1
+UIStroke.Parent = StartupNotification
+
+-- Avatar
+local AvatarImage = Instance.new("ImageLabel")
+AvatarImage.Size = UDim2.new(0, 50, 0, 50)
+AvatarImage.Position = UDim2.new(0, 10, 0.5, -25)
+AvatarImage.BackgroundColor3 = Color3.fromRGB(20, 26, 46)
+AvatarImage.BorderSizePixel = 0
+AvatarImage.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. LocalPlayer.UserId .. "&width=420&height=420&format=png"
+AvatarImage.Parent = StartupNotification
+
+-- Coin arrondi pour l'avatar
+local AvatarCorner = Instance.new("UICorner")
+AvatarCorner.CornerRadius = UDim.new(0, 6)
+AvatarCorner.Parent = AvatarImage
+
+-- Texte de bienvenue (ajusté pour rester dans la frame)
+local WelcomeText = Instance.new("TextLabel")
+WelcomeText.Size = UDim2.new(0, 200, 0, 20)  -- Largeur fixe pour éviter le débordement
+WelcomeText.Position = UDim2.new(0, 70, 0, 10)
+WelcomeText.BackgroundTransparency = 1
+WelcomeText.Text = "Executed By :"
+WelcomeText.TextColor3 = Color3.fromRGB(200, 200, 255)
+WelcomeText.Font = Enum.Font.GothamBold
+WelcomeText.TextSize = 14
+WelcomeText.TextXAlignment = Enum.TextXAlignment.Left
+WelcomeText.TextWrapped = true  -- Permet au texte de passer à la ligne si nécessaire
+WelcomeText.Parent = StartupNotification
+
+-- Pseudo (ajusté pour rester dans la frame)
+local UsernameLabel = Instance.new("TextLabel")
+UsernameLabel.Size = UDim2.new(0, 200, 0, 20)  -- Largeur fixe pour éviter le débordement
+UsernameLabel.Position = UDim2.new(0, 70, 0, 32)
+UsernameLabel.BackgroundTransparency = 1
+UsernameLabel.Text = LocalPlayer.DisplayName
+UsernameLabel.TextColor3 = Color3.fromRGB(0, 180, 255)
+UsernameLabel.Font = Enum.Font.GothamBold
+UsernameLabel.TextSize = 16
+UsernameLabel.TextXAlignment = Enum.TextXAlignment.Left
+UsernameLabel.TextWrapped = true  -- Permet au texte de passer à la ligne si nécessaire
+UsernameLabel.Parent = StartupNotification
+
+-- Bouton pour fermer la notification
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 24, 0, 24)
+CloseButton.Position = UDim2.new(1, -30, 0, 20)
+CloseButton.BackgroundColor3 = Color3.fromRGB(180, 40, 60)
+CloseButton.BackgroundTransparency = 0.4
+CloseButton.Text = "×"
+CloseButton.TextColor3 = Color3.new(1, 1, 1)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 16
+CloseButton.BorderSizePixel = 0
+CloseButton.Parent = StartupNotification
+
+-- Coin arrondi pour le bouton
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = CloseButton
+
+-- Animation d'apparition
+StartupNotification.Position = UDim2.new(1.1, 0, 0.7, 0)  -- Position de départ (hors écran)
+local TweenService = game:GetService("TweenService")
+local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local tween = TweenService:Create(StartupNotification, tweenInfo, {Position = UDim2.new(1, -310, 0.7, 0)})
+tween:Play()
+
+-- Fermeture automatique après 5 secondes
+task.delay(5, function()
+    local tweenOut = TweenService:Create(StartupNotification, tweenInfo, {Position = UDim2.new(1.1, 0, 0.7, 0)})
+    tweenOut:Play()
+    tweenOut.Completed:Connect(function()
+        StartupNotification:Destroy()
+    end)
+end)
+
+-- Fermeture manuelle
+CloseButton.MouseButton1Click:Connect(function()
+    local tweenOut = TweenService:Create(StartupNotification, tweenInfo, {Position = UDim2.new(1.1, 0, 0.7, 0)})
+    tweenOut:Play()
+    tweenOut.Completed:Connect(function()
+        StartupNotification:Destroy()
+    end)
+end)
+
+-- Effet de survol pour le bouton
+CloseButton.MouseEnter:Connect(function()
+    CloseButton.BackgroundTransparency = 0
+end)
+
+CloseButton.MouseLeave:Connect(function()
+    CloseButton.BackgroundTransparency = 0.4
+end)
 
 -- ══════════════════════════════════════════════
 --              NOTIFICATION SYSTEM
@@ -504,7 +615,9 @@ local tabDefs = {
     { name = "Visual",   icon = "👁" },
     { name = "MM2",      icon = "💀" },
     { name = "Tools",    icon = "🔧" },
+    { name = "Info",     icon = "📋" },
     { name = "Settings", icon = "⚙" },
+
 }
 
 local tabButtons = {}
@@ -529,7 +642,165 @@ local function switchTab(name)
 end
 
 local tabCount = #tabDefs
-for i, def in ipairs(tabDefs) do
+for i, def in ipairs(tabDefs) do -- Tabsinfoxddd
+-- Fonction pour obtenir le nombre d'amis (méthode alternative)
+local function getFriendCount(userId)
+    local success, response = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(
+            game:HttpGet("https://friends.roblox.com/v1/users/" .. userId .. "/friends/count")
+        )
+    end)
+
+    if success and response and response.count then
+        return response.count
+    else
+        return "Erreur"
+    end
+end
+
+-- Contenu de la tab "Info"
+local infoTab = tabFrames["Info"]
+if infoTab then
+    -- Frame principale pour les infos utilisateur
+    local userInfoFrame = Instance.new("Frame")
+    userInfoFrame.Size = UDim2.new(1, -20, 0, 300)
+    userInfoFrame.Position = UDim2.new(0, 10, 0, 10)
+    userInfoFrame.BackgroundColor3 = Color3.fromRGB(14, 18, 32)
+    userInfoFrame.BorderSizePixel = 0
+    userInfoFrame.Parent = infoTab
+    addCorner(userInfoFrame, 8)
+    addStroke(userInfoFrame, Color3.fromRGB(30, 55, 90), 1)
+
+    -- Layout pour organiser les éléments
+    local userInfoLayout = Instance.new("UIListLayout")
+    userInfoLayout.Padding = UDim.new(0, 10)
+    userInfoLayout.Parent = userInfoFrame
+
+    local userInfoPadding = Instance.new("UIPadding")
+    userInfoPadding.PaddingLeft = UDim.new(0, 10)
+    userInfoPadding.PaddingRight = UDim.new(0, 10)
+    userInfoPadding.PaddingTop = UDim.new(0, 10)
+    userInfoPadding.PaddingBottom = UDim.new(0, 10)
+    userInfoPadding.Parent = userInfoFrame
+
+    -- Avatar
+    local userAvatar = Instance.new("ImageLabel")
+    userAvatar.Size = UDim2.new(0, 80, 0, 80)
+    userAvatar.Position = UDim2.new(0.5, -40, 0, 10)
+    userAvatar.BackgroundColor3 = Color3.fromRGB(20, 26, 46)
+    userAvatar.BorderSizePixel = 0
+    userAvatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. LocalPlayer.UserId .. "&width=420&height=420&format=png"
+    userAvatar.Parent = userInfoFrame
+    addCorner(userAvatar, 8)
+
+    -- Titre "Vos Informations"
+    local infoTitle = Instance.new("TextLabel")
+    infoTitle.Size = UDim2.new(1, 0, 0, 24)
+    infoTitle.Position = UDim2.new(0, 0, 0, 90)
+    infoTitle.BackgroundTransparency = 1
+    infoTitle.Text = "Vos Informations"
+    infoTitle.TextColor3 = Color3.fromRGB(0, 180, 255)
+    infoTitle.Font = Enum.Font.GothamBold
+    infoTitle.TextSize = 16
+    infoTitle.TextXAlignment = Enum.TextXAlignment.Center
+    infoTitle.Parent = userInfoFrame
+
+    -- Séparateur
+    local separator = Instance.new("Frame")
+    separator.Size = UDim2.new(1, 0, 0, 1)
+    separator.Position = UDim2.new(0, 0, 0, 120)
+    separator.BackgroundColor3 = Color3.fromRGB(40, 80, 130)
+    separator.BorderSizePixel = 0
+    separator.Parent = userInfoFrame
+
+    -- Frame pour contenir toutes les infos textuelles
+    local infoContainer = Instance.new("Frame")
+    infoContainer.Size = UDim2.new(1, 0, 0, 150)
+    infoContainer.Position = UDim2.new(0, 0, 0, 130)
+    infoContainer.BackgroundTransparency = 1
+    infoContainer.Parent = userInfoFrame
+
+    -- Layout pour les infos textuelles
+    local infoLayout = Instance.new("UIListLayout")
+    infoLayout.Padding = UDim.new(0, 5)
+    infoLayout.Parent = infoContainer
+
+    -- Nom d'utilisateur
+    local usernameLabel = Instance.new("TextLabel")
+    usernameLabel.Size = UDim2.new(1, 0, 0, 20)
+    usernameLabel.BackgroundTransparency = 1
+    usernameLabel.Text = "Nom d'utilisateur: " .. LocalPlayer.Name
+    usernameLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
+    usernameLabel.Font = Enum.Font.GothamBold
+    usernameLabel.TextSize = 14
+    usernameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    usernameLabel.Parent = infoContainer
+
+    -- Nom d'affichage
+    local displayNameLabel = Instance.new("TextLabel")
+    displayNameLabel.Size = UDim2.new(1, 0, 0, 20)
+    displayNameLabel.BackgroundTransparency = 1
+    displayNameLabel.Text = "Nom d'affichage: " .. LocalPlayer.DisplayName
+    displayNameLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
+    displayNameLabel.Font = Enum.Font.GothamBold
+    displayNameLabel.TextSize = 14
+    displayNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    displayNameLabel.Parent = infoContainer
+
+    -- ID utilisateur
+    local userIdLabel = Instance.new("TextLabel")
+    userIdLabel.Size = UDim2.new(1, 0, 0, 20)
+    userIdLabel.BackgroundTransparency = 1
+    userIdLabel.Text = "ID utilisateur: " .. LocalPlayer.UserId
+    userIdLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
+    userIdLabel.Font = Enum.Font.GothamBold
+    userIdLabel.TextSize = 14
+    userIdLabel.TextXAlignment = Enum.TextXAlignment.Left
+    userIdLabel.Parent = infoContainer
+
+    -- Nombre d'amis
+    local friendsLabel = Instance.new("TextLabel")
+    friendsLabel.Size = UDim2.new(1, 0, 0, 20)
+    friendsLabel.BackgroundTransparency = 1
+    friendsLabel.Text = "Nombre d'amis: Chargement..."
+    friendsLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
+    friendsLabel.Font = Enum.Font.GothamBold
+    friendsLabel.TextSize = 14
+    friendsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    friendsLabel.Parent = infoContainer
+
+    -- Charger le nombre d'amis de manière asynchrone
+    task.spawn(function()
+        local friendCount = getFriendCount(LocalPlayer.UserId)
+        friendsLabel.Text = "Nombre d'amis: " .. friendCount
+    end)
+
+    -- Bouton pour copier l'ID utilisateur
+    local copyIdButton = Instance.new("TextButton")
+    copyIdButton.Size = UDim2.new(0, 120, 0, 30)
+    copyIdButton.Position = UDim2.new(0.5, -60, 0, 270)
+    copyIdButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+    copyIdButton.Text = "Copier ID"
+    copyIdButton.TextColor3 = Color3.new(1, 1, 1)
+    copyIdButton.Font = Enum.Font.GothamBold
+    copyIdButton.TextSize = 14
+    copyIdButton.BorderSizePixel = 0
+    copyIdButton.Parent = userInfoFrame
+    addCorner(copyIdButton, 6)
+
+    copyIdButton.MouseButton1Click:Connect(function()
+        setclipboard(tostring(LocalPlayer.UserId))
+        notify("ID copié", "ID utilisateur copié dans le presse-papiers.", Color3.fromRGB(0, 180, 255))
+    end)
+
+    copyIdButton.MouseEnter:Connect(function()
+        tw(copyIdButton, {BackgroundColor3 = Color3.fromRGB(0, 160, 255)}, 0.15)
+    end)
+
+    copyIdButton.MouseLeave:Connect(function()
+        tw(copyIdButton, {BackgroundColor3 = Color3.fromRGB(0, 120, 215)}, 0.15)
+    end)
+end
     local btn = Instance.new("TextButton")
     btn.Name = def.name
     btn.Size = UDim2.new(1 / tabCount, -2, 1, 0)
@@ -997,7 +1268,7 @@ local function refreshConfigList()
         addCorner(loadBtn, 6)
         loadBtn.MouseButton1Click:Connect(function()
             loadConfig(name)
-            notify("Config chargé", name, Color3.fromRGB(0, 160, 255))
+            notify("Config loaded", name, Color3.fromRGB(0, 160, 255))
         end)
         loadBtn.MouseEnter:Connect(function() tw(loadBtn, {BackgroundColor3 = Color3.fromRGB(0, 140, 255)}, 0.1) end)
         loadBtn.MouseLeave:Connect(function() tw(loadBtn, {BackgroundColor3 = Color3.fromRGB(0, 100, 200)}, 0.1) end)
@@ -1640,7 +1911,7 @@ task.delay(0.5, function()
     if al and al ~= "" then
         local ok = loadConfig(al)
         if ok then
-            notify("Autoload ✓", al .. " chargé automatiquement", Color3.fromRGB(0, 200, 100))
+            notify("Autoload ✓", al .. " Loaded", Color3.fromRGB(0, 200, 100))
         end
     else
         -- Charger la taille et la FOV sauvegardées
