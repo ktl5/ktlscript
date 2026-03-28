@@ -742,7 +742,7 @@ if infoTab then
     copyIdButton.Size = UDim2.new(0, 100, 0, 28)
     copyIdButton.Position = UDim2.new(0.5, -50, 0, 126)
     copyIdButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-    copyIdButton.Text = "📋 Copier ID"
+    copyIdButton.Text = "📋UserID"
     copyIdButton.TextColor3 = Color3.new(1, 1, 1)
     copyIdButton.Font = Enum.Font.GothamBold
     copyIdButton.TextSize = 12
@@ -867,7 +867,7 @@ if infoTab then
     copyPlaceIdButton.Size = UDim2.new(0, 120, 0, 28)
     copyPlaceIdButton.Position = UDim2.new(1, -130, 0, 30)
     copyPlaceIdButton.BackgroundColor3 = Color3.fromRGB(120, 80, 200)
-    copyPlaceIdButton.Text = "📋 Copier Place ID"
+    copyPlaceIdButton.Text = "📋PlaceID"
     copyPlaceIdButton.TextColor3 = Color3.new(1, 1, 1)
     copyPlaceIdButton.Font = Enum.Font.GothamBold
     copyPlaceIdButton.TextSize = 12
