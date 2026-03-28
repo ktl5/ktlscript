@@ -864,7 +864,15 @@ end
         addInfoPair("🎂Âge du compte", tostring(LocalPlayer.AccountAge) .. " jours", Color3.fromRGB(0, 200, 255), 6031077975)
 
         -- Joueurs dans le serveur
-        addInfoPair("👤Joueurs dans le serveur", #game.Players:GetPlayers(), Color3.fromRGB(0, 255, 150), 6031094670)
+        local playersValue = addInfoPair("👤Joueurs dans le serveur", #game.Players:GetPlayers(), Color3.fromRGB(0, 255, 150), 6031094670)
+        game.Players.PlayerAdded:Connect(function()
+    playersValue.Text = #game.Players:GetPlayers()
+end)
+
+game.Players.PlayerRemoving:Connect(function()
+    playersValue.Text = #game.Players:GetPlayers()
+end)
+
 
     end)
 
