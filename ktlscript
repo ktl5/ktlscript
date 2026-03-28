@@ -853,7 +853,7 @@ if infoTab then
 
     -- Image de la place (avec bordure)
     local placeImage = Instance.new("ImageLabel")
-    placeImage.Size = UDim2.new(1, 0, 0, 80)
+    placeImage.Size = UDim2.new(1, 0, 0, 100)
     placeImage.Position = UDim2.new(0, 0, 0, 30)
     placeImage.BackgroundColor3 = Color3.fromRGB(20, 26, 46)
     placeImage.BorderSizePixel = 0
@@ -865,7 +865,7 @@ if infoTab then
     -- Bouton pour copier l'ID de la place
     local copyPlaceIdButton = Instance.new("TextButton")
     copyPlaceIdButton.Size = UDim2.new(0, 120, 0, 28)
-    copyPlaceIdButton.Position = UDim2.new(1, -130, 0, 30)
+    copyPlaceIdButton.Position = UDim2.new(1, -130, 0, 35)
     copyPlaceIdButton.BackgroundColor3 = Color3.fromRGB(120, 80, 200)
     copyPlaceIdButton.Text = "📋PlaceID"
     copyPlaceIdButton.TextColor3 = Color3.new(1, 1, 1)
