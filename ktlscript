@@ -824,20 +824,20 @@ if infoTab then
 
         -- Nombre d'amis
         local friendCount = getFriendCount(LocalPlayer.UserId)
-        addInfoPair("Amis", friendCount, Color3.fromRGB(255, 180, 0))
+        addInfoPair("👥 Amis", friendCount, Color3.fromRGB(255, 180, 0))
 
         -- Statut Premium (simulé)
-        addInfoPair("Premium", "Oui", Color3.fromRGB(255, 215, 0))
+        addInfoPair("⭐Premium", "Oui", Color3.fromRGB(255, 215, 0))
 
         -- Place ID et nom
-        addInfoPair("Place ID", game.PlaceId, Color3.fromRGB(180, 120, 255))
-        addInfoPair("Nom de la place", game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name, Color3.fromRGB(180, 120, 255))
+        addInfoPair("🆔Place ID", game.PlaceId, Color3.fromRGB(180, 120, 255))
+        addInfoPair("📌Nom de la place", game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name, Color3.fromRGB(180, 120, 255))
 
-            -- Âge du compte
-    addInfoPair("Âge du compte", tostring(LocalPlayer.AccountAge) .. " jours", Color3.fromRGB(0, 200, 255))
+        -- Âge du compte
+        addInfoPair("🎂Âge du compte", tostring(LocalPlayer.AccountAge) .. " jours", Color3.fromRGB(0, 200, 255))
 
-    -- Joueurs dans le serveur
-    addInfoPair("Joueurs dans le serveur", #game.Players:GetPlayers(), Color3.fromRGB(0, 255, 150))
+        -- Joueurs dans le serveur
+        addInfoPair("👤Joueurs dans le serveur", #game.Players:GetPlayers(), Color3.fromRGB(0, 255, 150))
 
     end)
 
