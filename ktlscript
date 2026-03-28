@@ -785,8 +785,8 @@ if infoTab then
     infoGrid.Parent = generalInfoSection
 
     local gridLayout = Instance.new("UIGridLayout")
-    gridLayout.CellSize = UDim2.new(0.5, -10, 0, 30)
-    gridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
+    gridLayout.CellSize = UDim2.new(0.5, -10, 0, 40)
+    gridLayout.CellPadding = UDim2.new(0, 8, 0, 12)
     gridLayout.Parent = infoGrid
 
     -- Ajout des infos sous forme de paires clé/valeur
