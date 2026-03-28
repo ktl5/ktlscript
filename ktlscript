@@ -821,8 +821,6 @@ if infoTab then
 
     -- Chargement asynchrone des infos
     task.spawn(function()
-        -- Date de création du compte (simulée)
-        addInfoPair("Compte créé", "12/05/2020", Color3.fromRGB(0, 200, 150))
 
         -- Nombre d'amis
         local friendCount = getFriendCount(LocalPlayer.UserId)
