@@ -790,54 +790,81 @@ if infoTab then
     gridLayout.Parent = infoGrid
 
     -- Ajout des infos sous forme de paires clé/valeur
-    local function addInfoPair(label, value, color)
-        local container = Instance.new("Frame")
-        container.Size = UDim2.new(1, 0, 0, 30)
-        container.BackgroundTransparency = 1
-        container.Parent = infoGrid
+local function addInfoPair(label, value, color, iconId)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 0, 40)
+    container.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- fond noir permanent
+    container.BackgroundTransparency = 0
+    container.Parent = infoGrid
 
-        local labelText = Instance.new("TextLabel")
-        labelText.Size = UDim2.new(1, 0, 0, 14)
-        labelText.Position = UDim2.new(0, 0, 0, 0)
-        labelText.BackgroundTransparency = 1
-        labelText.Text = label
-        labelText.TextColor3 = Color3.fromRGB(120, 160, 200)
-        labelText.Font = Enum.Font.Gotham
-        labelText.TextSize = 12
-        labelText.TextXAlignment = Enum.TextXAlignment.Left
-        labelText.Parent = container
+    -- Animation d’apparition
+    container.BackgroundTransparency = 1
+    container.Position = UDim2.new(0, 0, 0, 10)
+    tw(container, {BackgroundTransparency = 0, Position = UDim2.new(0, 0, 0, 0)}, 0.25)
 
-        local valueText = Instance.new("TextLabel")
-        valueText.Size = UDim2.new(1, 0, 0, 16)
-        valueText.Position = UDim2.new(0, 0, 0, 14)
-        valueText.BackgroundTransparency = 1
-        valueText.Text = value
-        valueText.TextColor3 = color or Color3.fromRGB(200, 220, 255)
-        valueText.Font = Enum.Font.GothamBold
-        valueText.TextSize = 13
-        valueText.TextXAlignment = Enum.TextXAlignment.Left
-        valueText.Parent = container
-    end
+    -- Hover effect
+    container.MouseEnter:Connect(function()
+        tw(container, {BackgroundTransparency = 0.85}, 0.15)
+    end)
+    container.MouseLeave:Connect(function()
+        tw(container, {BackgroundTransparency = 1}, 0.15)
+    end)
+
+    -- Icône colorée
+    local icon = Instance.new("ImageLabel")
+    icon.Size = UDim2.new(0, 20, 0, 20)
+    icon.Position = UDim2.new(0, 0, 0, 10)
+    icon.BackgroundTransparency = 1
+    icon.Image = "rbxassetid://" .. iconId
+    icon.Parent = container
+
+    -- Label
+    local labelText = Instance.new("TextLabel")
+    labelText.Size = UDim2.new(1, -30, 0, 16)
+    labelText.Position = UDim2.new(0, 30, 0, 0)
+    labelText.BackgroundTransparency = 1
+    labelText.Text = label
+    labelText.TextColor3 = Color3.fromRGB(120, 160, 200)
+    labelText.Font = Enum.Font.Gotham
+    labelText.TextSize = 12
+    labelText.TextXAlignment = Enum.TextXAlignment.Left
+    labelText.Parent = container
+
+    -- Valeur
+    local valueText = Instance.new("TextLabel")
+    valueText.Size = UDim2.new(1, -30, 0, 18)
+    valueText.Position = UDim2.new(0, 30, 0, 18)
+    valueText.BackgroundTransparency = 1
+    valueText.Text = value
+    valueText.TextColor3 = color or Color3.fromRGB(200, 220, 255)
+    valueText.Font = Enum.Font.GothamBold
+    valueText.TextSize = 14
+    valueText.TextXAlignment = Enum.TextXAlignment.Left
+    valueText.Parent = container
+
+    return valueText
+end
+
 
     -- Chargement asynchrone des infos
     task.spawn(function()
 
         -- Nombre d'amis
         local friendCount = getFriendCount(LocalPlayer.UserId)
-        addInfoPair("👥 Amis", friendCount, Color3.fromRGB(255, 180, 0))
+        addInfoPair("👥 Amis", friendCount, Color3.fromRGB(255, 180, 0), 6031265975)
 
         -- Statut Premium (simulé)
-        addInfoPair("⭐Premium", "Oui", Color3.fromRGB(255, 215, 0))
+        addInfoPair("⭐Premium", "Oui", Color3.fromRGB(255, 215, 0), 6031075938)
 
         -- Place ID et nom
-        addInfoPair("🆔Place ID", game.PlaceId, Color3.fromRGB(180, 120, 255))
-        addInfoPair("📌Nom de la place", game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name, Color3.fromRGB(180, 120, 255))
+        addInfoPair("🆔Place ID", game.PlaceId, Color3.fromRGB(180, 120, 255), 6031280882)
+        addInfoPair("📌Nom de la place", game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name, Color3.fromRGB(180, 120, 255), 6031071053)
 
         -- Âge du compte
-        addInfoPair("🎂Âge du compte", tostring(LocalPlayer.AccountAge) .. " jours", Color3.fromRGB(0, 200, 255))
+        addInfoPair("🎂Âge du compte", tostring(LocalPlayer.AccountAge) .. " jours", Color3.fromRGB(0, 200, 255), 6031077975)
 
         -- Joueurs dans le serveur
-        addInfoPair("👤Joueurs dans le serveur", #game.Players:GetPlayers(), Color3.fromRGB(0, 255, 150))
+        addInfoPair("👤Joueurs dans le serveur", #game.Players:GetPlayers(), Color3.fromRGB(0, 255, 150), 6031094670)
 
     end)
 
