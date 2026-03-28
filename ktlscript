@@ -663,7 +663,7 @@ local infoTab = tabFrames["Info"]
 if infoTab then
     -- Frame principale avec fond dégradé et ombre
     local userInfoFrame = Instance.new("Frame")
-    userInfoFrame.Size = UDim2.new(1, -20, 0, 480)
+    userInfoFrame.Size = UDim2.new(1, -20, 0, 560)
     userInfoFrame.Position = UDim2.new(0, 10, 0, 10)
     userInfoFrame.BackgroundColor3 = Color3.fromRGB(10, 14, 24)
     userInfoFrame.BorderSizePixel = 0
