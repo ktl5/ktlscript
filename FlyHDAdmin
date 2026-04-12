@@ -49,7 +49,6 @@ local function unloadScript()
     if flyGui then flyGui:Destroy() end
 end
 
--- CHARACTER SETUP
 local function setupCharacter()
     character = player.Character or player.CharacterAdded:Wait()
     humanoid = character:WaitForChild("Humanoid")
@@ -348,7 +347,6 @@ function startNoclipCam()
     noclipCamStatusValue.Text = "On"
     noclipCamStatusValue.TextColor3 = green
     noclipCamBtn.Text = "DISABLE NOCLIP CAM"
-
     player.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Invisicam
     updateNoclipLoop()
 end
@@ -359,7 +357,6 @@ function stopNoclipCam()
     noclipCamStatusValue.Text = "Off"
     noclipCamStatusValue.TextColor3 = red
     noclipCamBtn.Text = "ENABLE NOCLIP CAM"
-
     player.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Zoom
     updateNoclipLoop()
 end
@@ -381,43 +378,45 @@ function startFlying()
 
     pos.Position = rootPart.Position + Vector3.new(0, 3, 0)
     pos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    pos.P = 40000
-    pos.D = 1700
+    pos.P = 55000
+    pos.D = 1400
 
     gyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    gyro.P = 40000
-    gyro.D = 1900
+    gyro.P = 20000
+    gyro.D = 800
 
     pos.Parent = rootPart
     gyro.Parent = rootPart
 
     humanoid.PlatformStand = true
 
-    heartbeatEvent = RunService.Heartbeat:Connect(function()
+    heartbeatEvent = RunService.Heartbeat:Connect(function(dt)
         if not flying then return end
         if UserInputService:GetFocusedTextBox() then return end
 
         local cam = workspace.CurrentCamera
         local moveDir = humanoid.MoveDirection
-        local travel = moveDir * (flySpeed * 5 * FlyMultiplier)
+        local frameSpeed = flySpeed * 5 * FlyMultiplier * (dt * 60)
+        local travel = moveDir * frameSpeed
         local dir = cam.CFrame:VectorToObjectSpace(travel)
 
         if dir.Magnitude > 0 then
-            local worldDir = cam.CFrame:VectorToWorldSpace(Vector3.new(dir.X, 0, dir.Z).Unit * dir.Magnitude)
+            local worldDir = cam.CFrame:VectorToWorldSpace(
+                Vector3.new(dir.X, 0, dir.Z).Unit * dir.Magnitude
+            )
             pos.Position = pos.Position + worldDir
         end
 
-        local vertSpeed = flySpeed * 5 * FlyMultiplier
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) or UserInputService:IsKeyDown(Enum.KeyCode.R) then
-            pos.Position = pos.Position + Vector3.new(0, vertSpeed, 0)
+            pos.Position = pos.Position + Vector3.new(0, frameSpeed, 0)
         elseif UserInputService:IsKeyDown(Enum.KeyCode.Q) then
-            pos.Position = pos.Position - Vector3.new(0, vertSpeed, 0)
+            pos.Position = pos.Position - Vector3.new(0, frameSpeed, 0)
         end
 
-        gyro.CFrame = cam.CFrame
+        gyro.CFrame = gyro.CFrame:Lerp(cam.CFrame, 0.3)
         humanoid.PlatformStand = true
     end)
-end
+end  -- ← fin de startFlying()
 
 function stopFlying()
     if not flying then return end
@@ -527,11 +526,11 @@ track(UserInputService.InputBegan:Connect(function(input, processed)
     end
 end))
 
--- COMMANDES CHAT OPTIMISÉES
+-- COMMANDES CHAT
 track(player.Chatted:Connect(function(msg)
     if type(msg) ~= "string" then return end
     if msg == "" then return end
-    if msg:sub(1, 1) ~= ";" then return end  -- ignore tout ce qui n'est pas une commande
+    if msg:sub(1, 1) ~= ";" then return end
 
     local lower = string.lower(msg)
     local args = string.split(lower, " ")
@@ -543,19 +542,14 @@ track(player.Chatted:Connect(function(msg)
             speedBox.Text = " " .. tostring(flySpeed)
         end
         if not flying then startFlying() end
-
     elseif cmd == ";haku" then
         if flying then stopFlying() end
-
     elseif cmd == ";noclip" then
         if not noclipMode then startNoclip() end
-
     elseif cmd == ";clip" then
         if noclipMode then stopNoclip() end
-
     elseif cmd == ";noclipcam" then
         if not noclipCamMode then startNoclipCam() end
-
     elseif cmd == ";clipcam" then
         if noclipCamMode then stopNoclipCam() end
     end
