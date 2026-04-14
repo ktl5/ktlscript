@@ -162,7 +162,7 @@ local tlClose = makeDot(header, dotRed, 20)
 local tlMin   = makeDot(header, dotYellow, 42)
 local tlMax   = makeDot(header, dotGreen, 64)
 
-local titleLabel = makeLabel(header, "Admin Panel", 13, textSecondary,
+local titleLabel = makeLabel(header, "Fly  &  Noclip", 13, textSecondary,
     Enum.TextXAlignment.Center, UDim2.new(0,0,0,0), UDim2.new(1,0,1,0))
 
 -- CONTENT ROOT
@@ -458,6 +458,12 @@ function startFlying()
     heartbeatEvent = RunService.Heartbeat:Connect(function(dt)
         if not flying then return end
         if UserInputService:GetFocusedTextBox() then return end
+
+        -- Détection téléportation : si le perso s'est retrouvé loin de la cible BodyPosition
+        -- (rollback serveur ou TP), on resynchronise immédiatement la cible
+        if (rootPart.Position - pos.Position).Magnitude > 40 then
+            pos.Position = rootPart.Position
+        end
 
         local cam = workspace.CurrentCamera
         local moveDir = humanoid.MoveDirection
