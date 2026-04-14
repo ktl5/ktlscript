@@ -346,16 +346,19 @@ hintLine2.TextTransparency = 0.45
 
 
 -- ══════════════════════════════════════════════════════════════════════════════
--- NOCLIP LOGIC
+-- NOCLIP LOGIC (logique propre du second script)
 -- ══════════════════════════════════════════════════════════════════════════════
 local function updateNoclipLoop()
     if noclipMode or noclipCamMode then
         if not noclipConnection then
             noclipConnection = RunService.Stepped:Connect(function()
-                if character then
-                    for _, part in pairs(character:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
+                -- Itération directe depuis Workspace comme dans le second script
+                for _, child in pairs(game:GetService("Workspace"):GetChildren()) do
+                    if child.Name == player.Name then
+                        for _, v in pairs(child:GetChildren()) do
+                            if v:IsA("BasePart") then
+                                v.CanCollide = false
+                            end
                         end
                     end
                 end
@@ -366,10 +369,11 @@ local function updateNoclipLoop()
             noclipConnection:Disconnect()
             noclipConnection = nil
         end
+        -- Réactiver la collision sur tous les BasePart du personnage
         if character then
-            for _, part in pairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
+            for _, v in pairs(character:GetChildren()) do
+                if v:IsA("BasePart") then
+                    v.CanCollide = true
                 end
             end
         end
@@ -645,7 +649,6 @@ track(UserInputService.InputBegan:Connect(function(input, processed)
         end)
     end
 end))
-
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- CHAT COMMANDS
