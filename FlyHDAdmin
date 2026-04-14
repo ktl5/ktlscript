@@ -162,7 +162,7 @@ local tlClose = makeDot(header, dotRed, 20)
 local tlMin   = makeDot(header, dotYellow, 42)
 local tlMax   = makeDot(header, dotGreen, 64)
 
-local titleLabel = makeLabel(header, "Fly  &  Noclip", 13, textSecondary,
+local titleLabel = makeLabel(header, "Admin Panel", 13, textSecondary,
     Enum.TextXAlignment.Center, UDim2.new(0,0,0,0), UDim2.new(1,0,1,0))
 
 -- CONTENT ROOT
