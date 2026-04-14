@@ -1,0 +1,35 @@
+spawn(function()
+	loadstring(game:HttpGet("https://pastebin.com/raw/xmDP6a0t"))()
+end)
+
+spawn(function()
+	loadstring(game:HttpGet("https://pastebin.com/raw/KuUd37Hz"))()
+end)
+
+spawn(function()
+	loadstring(game:HttpGet("https://pastebin.com/raw/GnvJQg4D"))()
+end)
+
+spawn(function()
+	loadstring(game:HttpGet("https://pastebin.com/raw/hSZavneE"))()
+end)
+
+spawn(function()
+	loadstring(game:HttpGet("https://pastebin.com/raw/c3WsCLEG"))()
+end)
+
+spawn(function()
+	loadstring(game:HttpGet("https://pastebin.com/raw/ZLywntB5"))()
+end)
+
+spawn(function()
+	loadstring(game:HttpGet("https://pastebin.com/raw/h1AtSQTL"))()
+end)
+
+spawn(function()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/FlyHDAdmin"))()
+end)
+
+spawn(function()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/frenchvoice"))()
+end)
