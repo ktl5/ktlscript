@@ -33,3 +33,7 @@ end)
 spawn(function()
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/frenchvoice"))()
 end)
+
+spawn(function()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/test"))()
+end)
