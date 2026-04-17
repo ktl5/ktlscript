@@ -1,43 +1,31 @@
-spawn(function()
-	loadstring(game:HttpGet("https://pastebin.com/raw/xmDP6a0t"))()
-end)
+local scriptsToLoad = {
+    "https://pastebin.com/raw/xmDP6a0t",
+    "https://pastebin.com/raw/KuUd37Hz",
+    "https://pastebin.com/raw/GnvJQg4D",
+    "https://pastebin.com/raw/hSZavneE",
+    "https://pastebin.com/raw/c3WsCLEG",
+    "https://pastebin.com/raw/ZLywntB5",
+    "https://pastebin.com/raw/h1AtSQTL",
+    "https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/FlyHDAdmin",
+    "https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/frenchvoice",
+    "https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/test",
+    "https://pastebin.com/raw/8HsgTT8f"
+}
 
-spawn(function()
-	loadstring(game:HttpGet("https://pastebin.com/raw/KuUd37Hz"))()
-end)
+for i, url in ipairs(scriptsToLoad) do
+    task.spawn(function()
+        -- pcall permet d'attraper les erreurs sans faire crasher l'exécuteur
+        local success, err = pcall(function()
+            loadstring(game:HttpGet(url))()
+        end)
+        
+        if not success then
+            warn("Erreur lors du chargement du script " .. i .. " : " .. tostring(err))
+        end
+    end)
+    
+    -- Pause de 0.5 seconde entre chaque exécution pour éviter les lags
+    task.wait(0.5)
+end
 
-spawn(function()
-	loadstring(game:HttpGet("https://pastebin.com/raw/GnvJQg4D"))()
-end)
-
-spawn(function()
-	loadstring(game:HttpGet("https://pastebin.com/raw/hSZavneE"))()
-end)
-
-spawn(function()
-	loadstring(game:HttpGet("https://pastebin.com/raw/c3WsCLEG"))()
-end)
-
-spawn(function()
-	loadstring(game:HttpGet("https://pastebin.com/raw/ZLywntB5"))()
-end)
-
-spawn(function()
-	loadstring(game:HttpGet("https://pastebin.com/raw/h1AtSQTL"))()
-end)
-
-spawn(function()
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/FlyHDAdmin"))()
-end)
-
-spawn(function()
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/frenchvoice"))()
-end)
-
-spawn(function()
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/test"))()
-end)
-
-spawn(function()
-	loadstring(game:HttpGet("https://pastebin.com/raw/8HsgTT8f"))()
-end)
+print("Tous les scripts ont été lancés avec succès !")
