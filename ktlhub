@@ -237,7 +237,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 
     -- H = Toggle NoclipCam
-    if input.KeyCode == Enum.KeyCode.H then
+    if input.KeyCode == Enum.KeyCode.CapsLock then
         local newState = not noclipCamMode
         noclipCamToggleObj.set(newState)
     end
