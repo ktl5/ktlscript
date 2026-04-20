@@ -165,21 +165,77 @@ end
 local mainTab = win:addTab("Movement")
 local settingsTab = win:addTab("Settings")
 local optionsTab = win:addTab("Options")
-
 win:switchTab(optionsTab)
+
+-- ANTI AFK
+local VirtualUser = game:GetService("VirtualUser")
+local antiAfkEnabled = false
+local antiAfkConnection = nil
+
+win:addToggle("Anti AFK", false, function(state)
+    antiAfkEnabled = state
+
+    if state then
+        antiAfkConnection = LocalPlayer.Idled:Connect(function()
+            if antiAfkEnabled then
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new())
+            end
+        end)
+    else
+        if antiAfkConnection then
+            antiAfkConnection:Disconnect()
+            antiAfkConnection = nil
+        end
+    end
+end)
 
 -- SLIDER MAX ZOOM
 win:addSlider("Max Zoom", 400, 5000, 400, function(v)
     LocalPlayer.CameraMaxZoomDistance = v
 end)
 
--- BOUTON REJOIN
-win:addButton("Rejoin server", function()
+-- SLIDER FOV
+win:addSlider("Field of View (FOV)", 70, 120, 70, function(v)
+    workspace.CurrentCamera.FieldOfView = v
+end)
+
+-- REJOIN RANDOM SERVER
+win:addButton("Rejoin Random Server", function()
     local ts = game:GetService("TeleportService")
     local placeId = game.PlaceId
-    local jobId = game.JobId
-    ts:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
+    local servers = {}
+    local cursor = ""
+
+    for i = 1, 3 do
+        local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100" .. (cursor ~= "" and "&cursor=" .. cursor or "")
+        local data = game:HttpGet(url)
+        local decoded = game:GetService("HttpService"):JSONDecode(data)
+
+        for _, srv in ipairs(decoded.data) do
+            if srv.playing < srv.maxPlayers then
+                table.insert(servers, srv)
+            end
+        end
+
+        cursor = decoded.nextPageCursor or ""
+        if cursor == "" then break end
+    end
+
+    if #servers > 0 then
+        local randomServer = servers[math.random(1, #servers)]
+        ts:TeleportToPlaceInstance(placeId, randomServer.id, LocalPlayer)
+    else
+        ts:Teleport(placeId, LocalPlayer)
+    end
 end)
+
+-- REJOIN SAME SERVER
+win:addButton("Rejoin server", function()
+    local ts = game:GetService("TeleportService")
+    ts:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+end)
+
 
 
 -- Onglet Mouvement
@@ -236,7 +292,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
         noclipToggleObj.set(newState)
     end
 
-    -- H = Toggle NoclipCam
+    -- CapsLock = Toggle NoclipCam
     if input.KeyCode == Enum.KeyCode.CapsLock then
         local newState = not noclipCamMode
         noclipCamToggleObj.set(newState)
