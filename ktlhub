@@ -420,7 +420,7 @@ function toggleInvisibility(state)
         end
         win:notify("Invisibility", "Disabled")
     else
-        win:notify("Invisibility", "Disabled ")
+        win:notify("Invisibility", "Enable")
     end
 end
 
