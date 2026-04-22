@@ -498,10 +498,24 @@ local function updateNoclipLoop()
             noclipConnection = nil
         end
         if character then
+            local hum = character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
+                hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+            end
+            
             for _, v in pairs(character:GetDescendants()) do
                 if v:IsA("BasePart") then
                     v.CanCollide = true
+                    v.Velocity = Vector3.new(0, 0, 0)
+                    v.RotVelocity = Vector3.new(0, 0, 0)
                 end
+            end
+
+            -- LA FIX : Téléportation corrective pour ré-ancrer le perso au sol
+            if rootPart then
+                task.wait(0.05)
+                rootPart.CFrame = rootPart.CFrame * CFrame.new(0, 0.1, 0)
             end
         end
     end
@@ -959,14 +973,14 @@ win:addToggle("Fling", false, function(state)
         end)
     else
         -- Désactivation (Unfling)
-        flingEnabled = false -- Sécurité supplémentaire
+        flingEnabled = false
 
         if flingDiedConn then
             flingDiedConn:Disconnect()
             flingDiedConn = nil
         end
 
-        -- 1. On détruit les forces d'abord
+        -- 1. Nettoyage immédiat des forces
         if rootPart then
             for _, v in pairs(rootPart:GetChildren()) do
                 if v:IsA("BodyAngularVelocity") or v:IsA("BodyPosition") or v:IsA("BodyGyro") then
@@ -976,29 +990,41 @@ win:addToggle("Fling", false, function(state)
                 end
             end
             
-            -- 2. On stoppe immédiatement tout mouvement résiduel
+            -- Reset physique brutal
             rootPart.Velocity = Vector3.new(0, 0, 0)
             rootPart.RotVelocity = Vector3.new(0, 0, 0)
         end
 
-        -- 3. On restaure les propriétés physiques
+        -- 2. Restauration Humanoïde & Physique
         if character then
+            local hum = character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.PlatformStand = false
+                hum.Sit = false
+                hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
+                hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+            end
+
             for _, child in pairs(character:GetDescendants()) do
                 if child:IsA("BasePart") then
+                    -- Reset total des propriétés physiques (important pour la démarche)
                     child.CustomPhysicalProperties = PhysicalProperties.new(0.7, 0.3, 0.5)
-                    child.Massless = false -- On remet la masse normale
+                    child.Massless = false
+                    child.Velocity = Vector3.new(0, 0, 0)
+                    child.RotVelocity = Vector3.new(0, 0, 0)
                 end
             end
         end
 
-        -- 4. On attend un tout petit peu que la physique se stabilise avant de remettre les collisions
-        task.wait(0.1)
-        
+        -- 3. Désactivation Noclip
         noclipMode = false
         updateNoclipLoop()
 
-        -- 5. Deuxième reset de vélocité pour être sûr
+        -- 4. LA FIX : Téléportation corrective pour "reset" le personnage dans le monde physique
         if rootPart then
+            task.wait(0.05)
+            -- On décale de 0.1 stud pour forcer le moteur physique à ré-ancrer le perso
+            rootPart.CFrame = rootPart.CFrame * CFrame.new(0, 0.1, 0)
             rootPart.Velocity = Vector3.new(0, 0, 0)
             rootPart.RotVelocity = Vector3.new(0, 0, 0)
         end
