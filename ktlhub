@@ -336,6 +336,17 @@ local invisibilityConfig = {
     Transparency = 0.7
 }
 local currentFOV = 70
+local visualsConfig = {
+    Chams = false,
+    ESP = false,
+    Outline = false,
+    Color = Color3.fromRGB(255, 255, 255)
+}
+local mm2Config = {
+    DroppedGunESP = false,
+    PlayerESP = false,
+    PlayerOutline = false
+}
 local flyToggleObj
 local noclipToggleObj
 local noclipCamToggleObj
@@ -589,10 +600,244 @@ local function updateUITheme(isDark)
     end
 end
 
+-------------------------------------------------------------------------
+-- VISUALS LOGIC
+-------------------------------------------------------------------------
+local function applyVisuals(p)
+    if p == LocalPlayer then return end
+    local char = p.Character
+    if not char then return end
+
+    -- Highlight Logic (Chams / Outline)
+    local highlight = char:FindFirstChild("KTL_Highlight")
+    if not highlight then
+        highlight = Instance.new("Highlight")
+        highlight.Name = "KTL_Highlight"
+        highlight.Parent = char
+    end
+
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillColor = Color3.fromRGB(255, 255, 255)
+
+    if visualsConfig.Chams then
+        highlight.Enabled = true
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+    elseif visualsConfig.Outline then
+        highlight.Enabled = true
+        highlight.FillTransparency = 1
+        highlight.OutlineTransparency = 0
+    else
+        highlight.Enabled = false
+    end
+
+    -- ESP Logic (Name)
+    local head = char:FindFirstChild("Head")
+    if head then
+        local espGui = head:FindFirstChild("KTL_ESP")
+        if not espGui then
+            espGui = Instance.new("BillboardGui")
+            espGui.Name = "KTL_ESP"
+            espGui.Adornee = head
+            espGui.Size = UDim2.new(0, 100, 0, 50)
+            espGui.StudsOffset = Vector3.new(0, 2, 0)
+            espGui.AlwaysOnTop = true
+            espGui.Parent = head
+
+            local nameLabel = Instance.new("TextLabel")
+            nameLabel.Size = UDim2.new(1, 0, 1, 0)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.Text = p.DisplayName or p.Name
+            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            nameLabel.TextStrokeTransparency = 0
+            nameLabel.TextSize = 14
+            nameLabel.Font = Enum.Font.SourceSansBold
+            nameLabel.Parent = espGui
+        end
+        espGui.Enabled = visualsConfig.ESP
+    end
+end
+
+local function updateAllVisuals()
+    for _, p in pairs(game:GetService("Players"):GetPlayers()) do
+        applyVisuals(p)
+    end
+end
+
+local function getMap()
+    for _, o in ipairs(workspace:GetChildren()) do
+        if o:FindFirstChild("CoinContainer") and o:FindFirstChild("Spawns") then return o end
+    end
+    return nil
+end
+
+local MM2_DEFAULT_COLOR = Color3.fromRGB(50, 205, 50)
+local MM2_KNIFE_COLOR   = Color3.fromRGB(220, 40, 40)
+local MM2_GUN_COLOR     = Color3.fromRGB(40, 120, 255)
+
+local function detectWeaponColor(player)
+    local character = player.Character
+    if not character then return MM2_DEFAULT_COLOR end
+    
+    local best, bestPrio = nil, 0
+    local weaponKeywords = {
+        { pattern = "gun",   priority = 2, color = MM2_GUN_COLOR   },
+        { pattern = "knife", priority = 1, color = MM2_KNIFE_COLOR },
+    }
+    
+    local function checkTool(tool)
+        if not tool:IsA("Tool") then return end
+        local lower = tool.Name:lower()
+        for _, entry in ipairs(weaponKeywords) do
+            if lower:find(entry.pattern) and entry.priority > bestPrio then
+                bestPrio = entry.priority
+                best = entry.color
+            end
+        end
+    end
+    
+    for _, obj in ipairs(character:GetChildren()) do checkTool(obj) end
+    local bp = player:FindFirstChildOfClass("Backpack")
+    if bp then for _, obj in ipairs(bp:GetChildren()) do checkTool(obj) end end
+    
+    return best or MM2_DEFAULT_COLOR
+end
+
+local function updateMM2PlayerVisuals(p)
+    if p == LocalPlayer then return end
+    local char = p.Character
+    if not char then return end
+
+    local color = detectWeaponColor(p)
+
+    -- Player Outline (Highlight)
+    local highlight = char:FindFirstChild("MM2_Highlight")
+    if mm2Config.PlayerOutline then
+        if not highlight then
+            highlight = Instance.new("Highlight")
+            highlight.Name = "MM2_Highlight"
+            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            highlight.FillTransparency = 0.5
+            highlight.OutlineTransparency = 0
+            highlight.Parent = char
+        end
+        highlight.FillColor = color
+        highlight.OutlineColor = color
+        highlight.Enabled = true
+    elseif highlight then
+        highlight.Enabled = false
+    end
+
+    -- Player ESP (BillboardGui)
+    local head = char:FindFirstChild("Head")
+    if head then
+        local espGui = head:FindFirstChild("MM2_ESP")
+        if mm2Config.PlayerESP then
+            if not espGui then
+                espGui = Instance.new("BillboardGui")
+                espGui.Name = "MM2_ESP"
+                espGui.Adornee = head
+                espGui.Size = UDim2.new(0, 140, 0, 26)
+                espGui.StudsOffset = Vector3.new(0, 2.6, 0)
+                espGui.AlwaysOnTop = true
+                espGui.Parent = head
+
+                local label = Instance.new("TextLabel")
+                label.Name = "NameLabel"
+                label.Size = UDim2.new(1, 0, 1, 0)
+                label.BackgroundTransparency = 1
+                label.Text = p.DisplayName or p.Name
+                label.TextColor3 = color
+                label.TextSize = 13
+                label.Font = Enum.Font.GothamBold
+                label.Parent = espGui
+            end
+            local label = espGui:FindFirstChild("NameLabel")
+            if label then label.TextColor3 = color end
+            espGui.Enabled = true
+        elseif espGui then
+            espGui.Enabled = false
+        end
+    end
+end
+
+local function updateAllMM2Visuals()
+    for _, p in pairs(Players:GetPlayers()) do
+        updateMM2PlayerVisuals(p)
+    end
+end
+
+local function updateDroppedGunESP()
+    local map = getMap()
+    if mm2Config.DroppedGunESP and map then
+        local gun = map:FindFirstChild("GunDrop")
+        if gun then
+            -- Highlight Logic
+            local highlight = gun:FindFirstChild("KTL_GunHighlight")
+            if not highlight then
+                highlight = Instance.new("Highlight")
+                highlight.Name = "KTL_GunHighlight"
+                highlight.FillColor = Color3.fromRGB(255, 255, 0)
+                highlight.FillTransparency = 0.5
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                highlight.Parent = gun
+            end
+            
+            -- ESP Logic (Name)
+            local espGui = gun:FindFirstChild("KTL_GunESP")
+            if not espGui then
+                espGui = Instance.new("BillboardGui")
+                espGui.Name = "KTL_GunESP"
+                espGui.AlwaysOnTop = true
+                espGui.Size = UDim2.new(0, 100, 0, 50)
+                espGui.StudsOffset = Vector3.new(0, 2, 0)
+                espGui.Parent = gun
+
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1, 0, 1, 0)
+                label.BackgroundTransparency = 1
+                label.Text = "GUN"
+                label.TextColor3 = Color3.fromRGB(255, 255, 0)
+                label.TextStrokeTransparency = 0
+                label.TextSize = 14
+                label.Font = Enum.Font.GothamBold
+                label.Parent = espGui
+            end
+        else
+            -- Clear old ESP if gun is gone
+            if map then
+                for _, child in pairs(map:GetChildren()) do
+                    if child.Name == "GunDrop" then
+                        local h = child:FindFirstChild("KTL_GunHighlight")
+                        if h then h:Destroy() end
+                        local e = child:FindFirstChild("KTL_GunESP")
+                        if e then e:Destroy() end
+                    end
+                end
+            end
+        end
+    end
+end
+
+game:GetService("Players").PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function()
+        task.wait(1)
+        applyVisuals(p)
+    end)
+end)
+
+RunService.Heartbeat:Connect(function()
+    updateAllVisuals()
+    updateAllMM2Visuals()
+    updateDroppedGunESP()
+end)
+
 -----------------------------------------------------------
 -- INTERFACE UTILISATEUR
 -----------------------------------------------------------
 local mainTab = win:addTab("Main")
+local visualsTab = win:addTab("Visuals")
+local mm2Tab = win:addTab("MM2")
 local playersTab = win:addTab("Players")
 local toolsTab = win:addTab("Tools")
 local discordTab = win:addTab("Discord")
@@ -729,6 +974,72 @@ end)
 
 invisibleToggleObj = win:addToggle("Invisibility (FE)", false, function(state)
     toggleInvisibility(state)
+end)
+
+-- Onglet Visuals
+win:switchTab(visualsTab)
+
+win:addToggle("Chams", false, function(state)
+    visualsConfig.Chams = state
+    updateAllVisuals()
+end)
+
+win:addToggle("ESP", false, function(state)
+    visualsConfig.ESP = state
+    updateAllVisuals()
+end)
+
+win:addToggle("Outline", false, function(state)
+    visualsConfig.Outline = state
+    updateAllVisuals()
+end)
+
+-- Onglet MM2
+win:switchTab(mm2Tab)
+
+win:addToggle("Dropped Gun ESP", false, function(state)
+    mm2Config.DroppedGunESP = state
+    if not state then
+        -- Clear ESP immediately when toggled off
+        local map = getMap()
+        if map then
+            for _, child in pairs(map:GetChildren()) do
+                if child.Name == "GunDrop" then
+                    local h = child:FindFirstChild("KTL_GunHighlight")
+                    if h then h:Destroy() end
+                    local e = child:FindFirstChild("KTL_GunESP")
+                    if e then e:Destroy() end
+                end
+            end
+        end
+    end
+end)
+
+win:addToggle("Player ESP", false, function(state)
+    mm2Config.PlayerESP = state
+    if not state then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Character then
+                local head = p.Character:FindFirstChild("Head")
+                if head then
+                    local esp = head:FindFirstChild("MM2_ESP")
+                    if esp then esp.Enabled = false end
+                end
+            end
+        end
+    end
+end)
+
+win:addToggle("Player Outline", false, function(state)
+    mm2Config.PlayerOutline = state
+    if not state then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Character then
+                local hl = p.Character:FindFirstChild("MM2_Highlight")
+                if hl then hl.Enabled = false end
+            end
+        end
+    end
 end)
 
 -- Onglet Joueurs
