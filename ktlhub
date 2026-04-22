@@ -1,22 +1,876 @@
-local scriptsToLoad = {
-    "https://pastebin.com/raw/RHeFvbqj",
-    "https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/test",
-}
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
 
-for i, url in ipairs(scriptsToLoad) do
-    task.spawn(function()
-        -- pcall permet d'attraper les erreurs sans faire crasher l'exécuteur
-        local success, err = pcall(function()
-            loadstring(game:HttpGet(url))()
-        end)
-        
-        if not success then
-            warn("Erreur lors du chargement du script " .. i .. " : " .. tostring(err))
+-- Mute notification sounds
+local SoundService = game:GetService("SoundService")
+local function muteSound(child)
+    if child:IsA("Sound") then
+        local function check()
+            local soundId = tostring(child.SoundId)
+            if soundId:find("3023237993") or soundId:find("6023426111") then
+                child.Volume = 0
+                child:Stop()
+                task.defer(function() child:Destroy() end)
+            end
         end
-    end)
-    
-    -- Pause de 0.5 seconde entre chaque exécution pour éviter les lags
-    task.wait(0.5)
+        check()
+        child:GetPropertyChangedSignal("SoundId"):Connect(check)
+    end
 end
 
-print("Tous les scripts ont été lancés avec succès !")
+SoundService.ChildAdded:Connect(muteSound)
+workspace.ChildAdded:Connect(muteSound)
+for _, v in ipairs(SoundService:GetChildren()) do muteSound(v) end
+for _, v in ipairs(workspace:GetChildren()) do muteSound(v) end
+
+-- Chargement de la librairie
+local lb = loadstring(game:HttpGet("https://pastebin.com/raw/xMH943RQ"))()
+
+-------------------------------------------------------------------------
+-- SYSTÈME DE SAUVEGARDE CONFIG (RESIZE)
+-------------------------------------------------------------------------
+local HttpService = game:GetService("HttpService")
+local configFileName = "KTLHub_Config.json"
+
+local function saveConfig(data)
+    if writefile then
+        writefile(configFileName, HttpService:JSONEncode(data))
+    end
+end
+
+local function loadConfig()
+    if isfile and isfile(configFileName) then
+        local content = readfile(configFileName)
+        local success, data = pcall(HttpService.JSONDecode, HttpService, content)
+        if success then return data end
+    end
+    return {}
+end
+
+local config = loadConfig()
+
+-- Patch pour enlever l'emoji refresh qui bug (carré vide) et ajouter la recherche fonctionnelle
+local oldAddPlayerList = lb.addPlayerList
+
+lb.addPlayerList = function(self, labelOrCallback, callback)
+    local toggleMode = false
+    local actionLabel = "Select"
+    local actionCallback = nil
+
+    if type(labelOrCallback) == "function" then
+        actionCallback = labelOrCallback
+        toggleMode = true
+    elseif type(labelOrCallback) == "string" then
+        actionLabel = labelOrCallback
+        actionCallback = callback
+        toggleMode = false
+    end
+
+    local parent, _, layoutOrder = self:_getTarget()
+
+    local wrapper = Instance.new("Frame")
+    wrapper.Size = UDim2.new(1, 0, 0, 0)
+    wrapper.AutomaticSize = Enum.AutomaticSize.Y
+    wrapper.BackgroundTransparency = 1
+    wrapper.LayoutOrder = layoutOrder
+    wrapper.Parent = parent
+
+    local uiList = Instance.new("UIListLayout")
+    uiList.Padding = UDim.new(0, 5)
+    uiList.SortOrder = Enum.SortOrder.LayoutOrder
+    uiList.Parent = wrapper
+
+    -- BARRE DE RECHERCHE INTÉGRÉE
+    local searchContainer = Instance.new("Frame")
+    searchContainer.Size = UDim2.new(1, -20, 0, 30)
+    searchContainer.Position = UDim2.new(0, 10, 0, 0)
+    searchContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    searchContainer.BackgroundTransparency = 0.3
+    searchContainer.LayoutOrder = 0
+    searchContainer.Parent = wrapper
+    Instance.new("UICorner", searchContainer).CornerRadius = UDim.new(0, 8)
+
+    local searchBox = Instance.new("TextBox")
+    searchBox.Size = UDim2.new(1, -20, 1, 0)
+    searchBox.Position = UDim2.new(0, 10, 0, 0)
+    searchBox.BackgroundTransparency = 1
+    searchBox.PlaceholderText = "Search Player (Username or DisplayName)..."
+    searchBox.Text = ""
+    searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    searchBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
+    searchBox.TextSize = 12
+    searchBox.Font = Enum.Font.Gotham
+    searchBox.TextXAlignment = Enum.TextXAlignment.Left
+    searchBox.ClearTextOnFocus = false
+    searchBox.Parent = searchContainer
+
+    local header = Instance.new("Frame")
+    header.Size = UDim2.new(1, 0, 0, 28)
+    header.BackgroundTransparency = 1
+    header.LayoutOrder = 1
+    header.Parent = wrapper
+
+    local headerPadding = Instance.new("UIPadding")
+    headerPadding.PaddingLeft = UDim.new(0, 10)
+    headerPadding.PaddingRight = UDim.new(0, 10)
+    headerPadding.Parent = header
+
+    local headerList = Instance.new("UIListLayout")
+    headerList.FillDirection = Enum.FillDirection.Horizontal
+    headerList.VerticalAlignment = Enum.VerticalAlignment.Center
+    headerList.SortOrder = Enum.SortOrder.LayoutOrder
+    headerList.Parent = header
+
+    local countLabel = Instance.new("TextLabel")
+    countLabel.Size = UDim2.new(1, -58, 1, 0)
+    countLabel.BackgroundTransparency = 1
+    countLabel.Text = "Players  •  " .. #Players:GetPlayers()
+    countLabel.TextColor3 = Color3.fromRGB(140, 140, 140)
+    countLabel.TextSize = 10
+    countLabel.Font = Enum.Font.GothamBold
+    countLabel.TextXAlignment = Enum.TextXAlignment.Left
+    countLabel.LayoutOrder = 1
+    countLabel.Parent = header
+
+    local refreshBtn = Instance.new("TextButton")
+    refreshBtn.Size = UDim2.new(0, 54, 0, 20)
+    refreshBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    refreshBtn.BackgroundTransparency = 0.3
+    refreshBtn.Text = "Refresh"
+    refreshBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
+    refreshBtn.TextSize = 10
+    refreshBtn.Font = Enum.Font.Gotham
+    refreshBtn.BorderSizePixel = 0
+    refreshBtn.LayoutOrder = 2
+    refreshBtn.Parent = header
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = refreshBtn
+
+    local listFrame = Instance.new("Frame")
+    listFrame.Size = UDim2.new(1, 0, 0, 0)
+    listFrame.AutomaticSize = Enum.AutomaticSize.Y
+    listFrame.BackgroundTransparency = 1
+    listFrame.LayoutOrder = 2
+    listFrame.Parent = wrapper
+
+    local listList = Instance.new("UIListLayout")
+    listList.Padding = UDim.new(0, 4)
+    listList.SortOrder = Enum.SortOrder.LayoutOrder
+    listList.Parent = listFrame
+
+    local listPadding = Instance.new("UIPadding")
+    listPadding.PaddingTop = UDim.new(0, 2)
+    listPadding.PaddingBottom = UDim.new(0, 2)
+    listPadding.Parent = listFrame
+
+    local selectedPlayer = nil
+    local currentFilter = ""
+
+    local function buildList()
+        for _, ch in pairs(listFrame:GetChildren()) do
+            if not ch:IsA("UIListLayout") and not ch:IsA("UIPadding") then
+                ch:Destroy()
+            end
+        end
+
+        local players = Players:GetPlayers()
+        local filtered = {}
+        for _, p in ipairs(players) do
+            if currentFilter == "" or p.Name:lower():find(currentFilter:lower()) or p.DisplayName:lower():find(currentFilter:lower()) then
+                table.insert(filtered, p)
+            end
+        end
+
+        countLabel.Text = "Players  •  " .. #filtered
+
+        for idx, player in ipairs(filtered) do
+            local card = Instance.new("Frame")
+            card.Size = UDim2.new(1, 0, 0, 52)
+            card.BackgroundColor3 = (selectedPlayer == player) and Color3.fromRGB(20, 80, 30) or Color3.fromRGB(20, 20, 20)
+            card.BackgroundTransparency = 0.4
+            card.BorderSizePixel = 0
+            card.LayoutOrder = idx
+            card.Parent = listFrame
+            
+            local cCorner = Instance.new("UICorner")
+            cCorner.CornerRadius = UDim.new(0, 10)
+            cCorner.Parent = card
+
+            local thumbImg = Instance.new("ImageLabel")
+            thumbImg.Size = UDim2.new(0, 38, 0, 38)
+            thumbImg.Position = UDim2.new(0, 8, 0.5, -19)
+            thumbImg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            thumbImg.BackgroundTransparency = 0.5
+            thumbImg.BorderSizePixel = 0
+            thumbImg.Parent = card
+            Instance.new("UICorner", thumbImg).CornerRadius = UDim.new(0, 8)
+
+            task.spawn(function()
+                local img = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+                thumbImg.Image = img
+            end)
+
+            local nameLabel = Instance.new("TextLabel")
+            nameLabel.Size = UDim2.new(1, -134, 0, 18)
+            nameLabel.Position = UDim2.new(0, 54, 0, 8)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.Text = player.DisplayName
+            nameLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+            nameLabel.TextSize = 12
+            nameLabel.Font = Enum.Font.GothamBold
+            nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+            nameLabel.Parent = card
+
+            local userLabel = Instance.new("TextLabel")
+            userLabel.Size = UDim2.new(1, -134, 0, 14)
+            userLabel.Position = UDim2.new(0, 54, 0, 28)
+            userLabel.BackgroundTransparency = 1
+            userLabel.Text = "@" .. player.Name
+            userLabel.TextColor3 = Color3.fromRGB(110, 110, 110)
+            userLabel.TextSize = 10
+            userLabel.Font = Enum.Font.Gotham
+            userLabel.TextXAlignment = Enum.TextXAlignment.Left
+            userLabel.Parent = card
+
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, 0, 1, 0)
+            btn.BackgroundTransparency = 1
+            btn.Text = ""
+            btn.Parent = card
+
+            btn.MouseButton1Click:Connect(function()
+                if toggleMode then
+                    if selectedPlayer == player then
+                        selectedPlayer = nil
+                        card.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+                        if actionCallback then actionCallback(player, false) end
+                    else
+                        if selectedPlayer then buildList() end -- Reset previous
+                        selectedPlayer = player
+                        card.BackgroundColor3 = Color3.fromRGB(20, 80, 30)
+                        if actionCallback then actionCallback(player, true) end
+                    end
+                else
+                    if actionCallback then actionCallback(player) end
+                end
+            end)
+        end
+        self:resize()
+    end
+
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        currentFilter = searchBox.Text
+        buildList()
+    end)
+
+    refreshBtn.MouseButton1Click:Connect(buildList)
+    buildList()
+
+    if self._activeTab then table.insert(self._activeTab.items, wrapper) end
+    self:resize()
+
+    return {
+        refresh = function(filter)
+            currentFilter = filter or searchBox.Text
+            buildList()
+        end,
+        getSelected = function() return selectedPlayer end,
+    }
+end
+
+local win = lb.new("KeyBind (T)")
+
+-- Appliquer la taille sauvegardée
+if config.SizeX and config.SizeY then
+    win.mainFrame.Size = UDim2.new(0, config.SizeX, 0, config.SizeY)
+    win._userResized = true
+    win._manualWidth = config.SizeX
+    win._manualHeight = config.SizeY
+end
+
+-- Sauvegarder la taille lors du changement
+win.mainFrame:GetPropertyChangedSignal("Size"):Connect(function()
+    if win._userResized then
+        config.SizeX = win.mainFrame.Size.X.Offset
+        config.SizeY = win.mainFrame.Size.Y.Offset
+        saveConfig(config)
+    end
+end)
+
+-------------------------------------------------------------------------
+-- VARIABLES FLY & NOCLIP
+-------------------------------------------------------------------------
+local flying = false
+local noclipMode = false
+local noclipCamMode = false
+local flySpeed = 50
+local FlyMultiplier = 0.010
+local walkSpeed = 16
+local clickTPEnabled = false
+local isInvisible = false
+local originalTransparencies = {}
+local invisibilityConfig = {
+    TeleportHeight = -5000, -- Réduit pour éviter certains kill planes agressifs
+    Transparency = 0.7
+}
+local currentFOV = 70
+local flyToggleObj
+local noclipToggleObj
+local noclipCamToggleObj
+local invisibleToggleObj
+local originalRootC0 = nil
+
+-- SYSTÈME DE FOV FORCÉE
+RunService.RenderStepped:Connect(function()
+    if workspace.CurrentCamera and workspace.CurrentCamera.FieldOfView ~= currentFOV then
+        workspace.CurrentCamera.FieldOfView = currentFOV
+    end
+end)
+
+
+local character, humanoid, rootPart
+local pos, gyro, heartbeatEvent, noclipConnection
+
+local function setupCharacter()
+    character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    humanoid = character:WaitForChild("Humanoid")
+    rootPart = character:WaitForChild("HumanoidRootPart")
+    originalTransparencies = {}
+end
+setupCharacter()
+
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    humanoid = newChar:WaitForChild("Humanoid")
+    rootPart = newChar:WaitForChild("HumanoidRootPart")
+
+    humanoid.WalkSpeed = walkSpeed
+
+    if flying then
+        pos, gyro = nil, nil
+        flying = false
+        task.wait(0.1)
+        startFlying()
+    end
+
+    if isInvisible then
+        isInvisible = false
+        task.wait(0.1)
+        toggleInvisibility(true)
+    end
+end)
+
+-------------------------------------------------------------------------
+-- LOGIQUE INVISIBILITÉ (NUCLEARBOBO 5.0.4 LOGIC)
+-------------------------------------------------------------------------
+local function applyTransparencyLoop()
+    if not isInvisible or not character then return end
+    
+    for _, obj in pairs(character:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Name ~= "HumanoidRootPart" then
+            if originalTransparencies[obj] == nil then
+                originalTransparencies[obj] = obj.Transparency
+            end
+            if obj.Transparency ~= invisibilityConfig.Transparency then
+                obj.Transparency = invisibilityConfig.Transparency
+            end
+        elseif obj:IsA("Decal") then
+            if obj.Transparency ~= invisibilityConfig.Transparency then
+                obj.Transparency = invisibilityConfig.Transparency
+            end
+        end
+    end
+end
+
+function toggleInvisibility(state)
+    if not character or not character.Parent then setupCharacter() end
+    isInvisible = state
+    
+    if not isInvisible then
+        -- Restauration des transparences
+        for obj, trans in pairs(originalTransparencies) do
+            if obj and obj.Parent then
+                obj.Transparency = trans
+            end
+        end
+        for _, obj in pairs(character:GetDescendants()) do
+            if obj:IsA("Decal") then obj.Transparency = 0 end
+        end
+        win:notify("Invisibility", "Disabled")
+    else
+        win:notify("Invisibility", "Disabled ")
+    end
+end
+
+-- Boucle de téléportation pour l'invisibilité
+RunService.Heartbeat:Connect(function()
+    if isInvisible and character and rootPart and humanoid and rootPart.Parent then
+        applyTransparencyLoop()
+
+        local oldCF = rootPart.CFrame
+        local oldOffset = humanoid.CameraOffset
+        local hiddenCF = oldCF * CFrame.new(0, invisibilityConfig.TeleportHeight, 0)
+        
+        -- Désactivation temporaire des forces du Fly pour éviter l'explosion physique
+        local oldMaxForce = nil
+        if flying and pos then
+            oldMaxForce = pos.MaxForce
+            pos.MaxForce = Vector3.new(0, 0, 0)
+        end
+        
+        rootPart.CFrame = hiddenCF
+        humanoid.CameraOffset = Vector3.new(0, -invisibilityConfig.TeleportHeight, 0)
+        
+        RunService.RenderStepped:Wait()
+        
+        if rootPart and rootPart.Parent then
+            local currentPos = rootPart.Position
+            local expectedPos = hiddenCF.Position
+            
+            -- Anti-Rollback TP: Si on a bougé de plus de 50 studs (ex: TP), on accepte la nouvelle position
+            if (currentPos - expectedPos).Magnitude > 50 then
+                oldCF = rootPart.CFrame
+            end
+            
+            rootPart.CFrame = oldCF
+            humanoid.CameraOffset = oldOffset
+            
+            -- Restauration des forces du Fly
+            if flying and pos and oldMaxForce then
+                pos.MaxForce = oldMaxForce
+            end
+        end
+    end
+end)
+
+-------------------------------------------------------------------------
+-- LOGIQUE NOCLIP
+-------------------------------------------------------------------------
+local function updateNoclipLoop()
+    if noclipMode or noclipCamMode then
+        if not noclipConnection then
+            noclipConnection = RunService.Stepped:Connect(function()
+                if character then
+                    for _, v in pairs(character:GetDescendants()) do
+                        if v:IsA("BasePart") then
+                            v.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        end
+    else
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
+        end
+        if character then
+            for _, v in pairs(character:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    v.CanCollide = true
+                end
+            end
+        end
+    end
+end
+
+-------------------------------------------------------------------------
+-- LOGIQUE FLY
+-------------------------------------------------------------------------
+function startFlying()
+    if flying or not rootPart then return end
+    flying = true
+    
+    pos = Instance.new("BodyPosition")
+    gyro = Instance.new("BodyGyro")
+
+    -- Fix: Si on est invisible, on ne prend pas la position actuelle (qui peut être à -5000)
+    -- On calcule la position de surface correcte
+    local targetInitialPos = rootPart.Position
+    if isInvisible then
+        targetInitialPos = targetInitialPos + Vector3.new(0, -invisibilityConfig.TeleportHeight, 0)
+    end
+
+    pos.Position = targetInitialPos + Vector3.new(0, 3, 0)
+    pos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    pos.P = 55000
+    pos.D = 1400
+
+    gyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    gyro.P = 20000
+    gyro.D = 800
+
+    pos.Parent = rootPart
+    gyro.Parent = rootPart
+    humanoid.PlatformStand = true
+
+    heartbeatEvent = RunService.Heartbeat:Connect(function(dt)
+        if not flying or not pos or not gyro or not rootPart then return end
+        if UserInputService:GetFocusedTextBox() then return end
+
+        -- Anti-Rollback: Si la distance entre le perso et la position cible du fly est trop grande (TP), on synchronise
+        if (rootPart.Position - pos.Position).Magnitude > 25 then
+            pos.Position = rootPart.Position
+        end
+
+        local cam = workspace.CurrentCamera
+        local moveDir = humanoid.MoveDirection
+        local frameSpeed = flySpeed * 5 * FlyMultiplier * (dt * 60)
+        local dir = cam.CFrame:VectorToObjectSpace(moveDir * frameSpeed)
+
+        if dir.Magnitude > 0 then
+            pos.Position = pos.Position + cam.CFrame:VectorToWorldSpace(Vector3.new(dir.X, 0, dir.Z).Unit * dir.Magnitude)
+        end
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            pos.Position = pos.Position + Vector3.new(0, frameSpeed, 0)
+        elseif UserInputService:IsKeyDown(Enum.KeyCode.Q) then
+            pos.Position = pos.Position - Vector3.new(0, frameSpeed, 0)
+        end
+
+        gyro.CFrame = gyro.CFrame:Lerp(cam.CFrame, 0.3)
+        humanoid.PlatformStand = true
+    end)
+end
+
+function stopFlying()
+    flying = false
+    if heartbeatEvent then heartbeatEvent:Disconnect() end
+    if pos then pos:Destroy() end
+    if gyro then gyro:Destroy() end
+    if humanoid then
+        humanoid.PlatformStand = false
+        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+end
+
+-------------------------------------------------------------------------
+-- SYSTÈME DE THÈME (DARK / WHITE)
+-------------------------------------------------------------------------
+local Themes = {
+    Dark = { Main = Color3.fromRGB(15, 15, 15), Rows = Color3.fromRGB(25, 25, 25), Text = Color3.fromRGB(255, 255, 255), Stroke = Color3.fromRGB(60, 60, 60) },
+    White = { Main = Color3.fromRGB(240, 240, 240), Rows = Color3.fromRGB(225, 225, 225), Text = Color3.fromRGB(20, 20, 20), Stroke = Color3.fromRGB(180, 180, 180) }
+}
+local AccentColor = Color3.fromRGB(80, 200, 120)
+
+local function updateUITheme(isDark)
+    local theme = isDark and Themes.Dark or Themes.White
+    win.mainFrame.BackgroundColor3 = theme.Main
+    local stroke = win.mainFrame:FindFirstChildOfClass("UIStroke")
+    if stroke then stroke.Color = theme.Stroke end
+    for _, obj in pairs(win.screenGui:GetDescendants()) do
+        if obj:IsA("Frame") and obj.BackgroundTransparency < 1 and obj.BackgroundColor3 ~= AccentColor and obj ~= win.mainFrame then
+            obj.BackgroundColor3 = theme.Rows
+        elseif obj:IsA("TextLabel") or obj:IsA("TextButton") then
+            if obj.TextColor3 ~= AccentColor then obj.TextColor3 = theme.Text end
+        end
+    end
+end
+
+-----------------------------------------------------------
+-- INTERFACE UTILISATEUR
+-----------------------------------------------------------
+local mainTab = win:addTab("Main")
+local playersTab = win:addTab("Players")
+local toolsTab = win:addTab("Tools")
+local discordTab = win:addTab("Discord")
+local settingsTab = win:addTab("Settings")
+local optionsTab = win:addTab("Options")
+win:switchTab(optionsTab)
+
+-- ANTI AFK
+local VirtualUser = game:GetService("VirtualUser")
+local antiAfkEnabled = false
+local antiAfkConnection = nil
+
+win:addToggle("Anti AFK", false, function(state)
+    antiAfkEnabled = state
+
+    if state then
+        antiAfkConnection = LocalPlayer.Idled:Connect(function()
+            if antiAfkEnabled then
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new())
+            end
+        end)
+    else
+        if antiAfkConnection then
+            antiAfkConnection:Disconnect()
+            antiAfkConnection = nil
+        end
+    end
+end)
+
+-- SLIDER MAX ZOOM
+win:addSlider("Max Zoom", 400, 5000, 400, function(v)
+    LocalPlayer.CameraMaxZoomDistance = v
+end)
+
+-- SLIDER FOV
+win:addSlider("Field of View (FOV)", 70, 120, 70, function(v)
+    currentFOV = v
+end)
+
+-- REJOIN RANDOM SERVER
+win:addButton("Rejoin Random Server", function()
+    local ts = game:GetService("TeleportService")
+    local placeId = game.PlaceId
+    local servers = {}
+    local cursor = ""
+    
+    win:notify("Teleport", "Searching for a random server...")
+
+    local success, err = pcall(function()
+        -- On essaie de récupérer plus de serveurs avec différentes pages
+        for i = 1, 5 do
+            local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Desc&limit=100" .. (cursor ~= "" and "&cursor=" .. cursor or "")
+            local data = game:HttpGet(url)
+            local decoded = game:GetService("HttpService"):JSONDecode(data)
+
+            if decoded and decoded.data then
+                for _, srv in ipairs(decoded.data) do
+                    -- On vérifie que c'est un serveur différent et qu'il y a de la place
+                    if srv.id ~= game.JobId and srv.playing < srv.maxPlayers then
+                        table.insert(servers, srv)
+                    end
+                end
+            end
+
+            cursor = decoded.nextPageCursor or ""
+            if cursor == "" then break end
+        end
+    end)
+
+    if not success then
+        win:notify("Error", "Failed to fetch servers: " .. tostring(err))
+        return
+    end
+
+    if #servers > 0 then
+        local randomServer = servers[math.random(1, #servers)]
+        win:notify("Teleport", "Joining server: " .. randomServer.id)
+        
+        local tpSuccess, tpErr = pcall(function()
+            ts:TeleportToPlaceInstance(placeId, randomServer.id, LocalPlayer)
+        end)
+        
+        if not tpSuccess then
+            win:notify("Error", "Teleport failed, trying simple rejoin...")
+            ts:Teleport(placeId, LocalPlayer)
+        end
+    else
+        win:notify("Info", "No other servers found, rejoining current game...")
+        ts:Teleport(placeId, LocalPlayer)
+    end
+end)
+
+-- REJOIN SAME SERVER
+win:addButton("Rejoin server", function()
+    local ts = game:GetService("TeleportService")
+    ts:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+end)
+
+
+
+-- Onglet Mouvement
+win:switchTab(mainTab)
+
+flyToggleObj = win:addToggle("Fly", false, function(state)
+    if state then startFlying() else stopFlying() end
+end)
+
+noclipToggleObj = win:addToggle("Noclip", false, function(state)
+    noclipMode = state
+    updateNoclipLoop()
+end)
+
+noclipCamToggleObj = win:addToggle("Noclip Camera", false, function(state)
+    noclipCamMode = state
+    LocalPlayer.DevCameraOcclusionMode = state and Enum.DevCameraOcclusionMode.Invisicam or Enum.DevCameraOcclusionMode.Zoom
+    updateNoclipLoop()
+end)
+
+win:addSlider("Fly Speed", 50, 300, 50, function(v)
+    flySpeed = v
+end)
+
+win:addSlider("WalkSpeed", 16, 100, 16, function(v)
+    walkSpeed = v
+    if humanoid then
+        humanoid.WalkSpeed = walkSpeed
+    end
+end)
+
+win:addToggle("Click TP (Ctrl + Click)", false, function(state)
+    clickTPEnabled = state
+end)
+
+invisibleToggleObj = win:addToggle("Invisibility (FE)", false, function(state)
+    toggleInvisibility(state)
+end)
+
+-- Onglet Joueurs
+win:switchTab(playersTab)
+
+local selectedPlayerForActions = nil
+local playerListObj
+local currentSearchText = ""
+
+playerListObj = win:addPlayerList(function(plr, selected)
+    if selected then
+        selectedPlayerForActions = plr
+    else
+        selectedPlayerForActions = nil
+    end
+end)
+
+win:addButton("Teleport to Selected", function()
+    if selectedPlayerForActions and selectedPlayerForActions.Character and selectedPlayerForActions.Character:FindFirstChild("HumanoidRootPart") then
+        local targetPart = selectedPlayerForActions.Character.HumanoidRootPart
+        rootPart.CFrame = targetPart.CFrame * CFrame.new(0, 0, 3) -- TP un peu devant
+        
+        -- Anti-rollback fly
+        if flying and pos then
+            pos.Position = rootPart.Position
+        
+        end
+    else
+        win:notify("Error", "No player selected or player character not found")
+    end
+end)
+
+local spectating = false
+local spectateBtn = win:addButton("Spectate Selected", function()
+    if spectating then
+        spectating = false
+        workspace.CurrentCamera.CameraSubject = humanoid
+        win:notify("Spectate", "Stopped spectating")
+    elseif selectedPlayerForActions and selectedPlayerForActions.Character and selectedPlayerForActions.Character:FindFirstChild("Humanoid") then
+        spectating = true
+        workspace.CurrentCamera.CameraSubject = selectedPlayerForActions.Character.Humanoid
+        win:notify("Spectate", "Now spectating " .. selectedPlayerForActions.DisplayName)
+    else
+        win:notify("Error", "No player")
+    end
+end)
+
+-- Onglet Outils
+win:switchTab(toolsTab)
+
+win:addButton("Skin Stealer (Y)", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/frenchvoice"))()
+end)
+
+win:addButton("Emote FE (B)", function()
+    loadstring(game:HttpGet("https://pastebin.com/raw/hSZavneE"))()
+end)
+
+win:addButton("Emote Stealer", function()
+    loadstring(game:HttpGet("https://pastebin.com/raw/GnvJQg4D"))()
+end)
+
+win:addButton("OmegaScript", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Omegascriptes/French-Voice/refs/heads/main/FrenchVoice.txt"))()
+end)
+
+win:addButton("Jerk Tool R6", function()
+    loadstring(game:HttpGet("https://pastefy.app/wa3v2Vgm/raw"))()
+end)
+
+win:addButton("Jerk Tool R15", function()
+    loadstring(game:HttpGet("https://pastefy.app/YZoglOyJ/raw"))()
+end)
+
+-- Onglet Discord
+win:switchTab(discordTab)
+
+win:addButton("Copy Discord Link", function()
+    if setclipboard then
+        setclipboard("https://discord.gg/gX7CrRYR8q")
+        win:notify("Discord", "Lien copié dans le presse-papiers !")
+    elseif toclipboard then
+        toclipboard("https://discord.gg/gX7CrRYR8q")
+        win:notify("Discord", "Lien copié dans le presse-papiers !")
+    else
+        win:notify("Error", "Votre exploit ne supporte pas le presse-papiers")
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+    if selectedPlayerForActions == plr then
+        selectedPlayerForActions = nil
+    end
+    if workspace.CurrentCamera.CameraSubject and workspace.CurrentCamera.CameraSubject.Parent == plr.Character then
+        workspace.CurrentCamera.CameraSubject = humanoid
+        spectating = false
+    end
+end)
+
+-- Onglet Paramètres
+win:switchTab(settingsTab)
+win:addToggle("Dark Mode", true, function(state)
+    updateUITheme(state)
+end)
+
+win:switchTab(mainTab)
+
+-- Keybinds rapides
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if UserInputService:GetFocusedTextBox() then return end
+
+    -- F = Toggle Fly
+    if input.KeyCode == Enum.KeyCode.F then
+        local newState = not flying
+        flyToggleObj.set(newState) -- met à jour l’UI + déclenche le callback
+    end
+
+    -- G = Toggle Noclip
+    if input.KeyCode == Enum.KeyCode.G then
+        local newState = not noclipMode
+        noclipToggleObj.set(newState)
+    end
+
+    -- CapsLock = Toggle NoclipCam
+    if input.KeyCode == Enum.KeyCode.CapsLock then
+        local newState = not noclipCamMode
+        noclipCamToggleObj.set(newState)
+    end
+
+    -- T = Minimize UI
+    if input.KeyCode == Enum.KeyCode.T then
+        win:minimize()
+    end
+
+    -- X = Toggle Invisibility
+    if input.KeyCode == Enum.KeyCode.X then
+        local newState = not isInvisible
+        invisibleToggleObj.set(newState)
+    end
+
+    -- Click TP Logic
+    if clickTPEnabled and input.UserInputType == Enum.UserInputType.MouseButton1 and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+        local mouse = LocalPlayer:GetMouse()
+        if mouse.Target and rootPart then
+            local oldPos = rootPart.Position
+            local targetPos = mouse.Hit.Position + Vector3.new(0, 3, 0)
+            local direction = (targetPos - oldPos).Unit
+
+            -- Si la distance est suffisante pour calculer une direction
+            if (targetPos - oldPos).Magnitude > 0.1 then
+                rootPart.CFrame = CFrame.lookAt(targetPos, targetPos + direction)
+                -- Si on vole, on synchronise aussi le gyro pour éviter un snapback immédiat trop brutal
+                if flying and gyro then
+                    gyro.CFrame = rootPart.CFrame
+                end
+            else
+                rootPart.CFrame = CFrame.new(targetPos)
+            end
+        end
+    end
+end)
