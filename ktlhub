@@ -1342,6 +1342,43 @@ end)
 -- Onglet MM2
 win:switchTab(mm2Tab)
 
+local function getPlayerByRole(roleName)
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local hasKnife = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
+            local hasGun = p.Character:FindFirstChild("Gun") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Gun")) or 
+                           p.Character:FindFirstChild("Revolver") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Revolver"))
+            
+            if roleName == "Murderer" and hasKnife then
+                return p
+            elseif roleName == "Sheriff" and hasGun then
+                return p
+            end
+        end
+    end
+    return nil
+end
+
+win:addButton("TP to Murderer", function()
+    local murderer = getPlayerByRole("Murderer")
+    if murderer and murderer.Character and murderer.Character:FindFirstChild("HumanoidRootPart") then
+        rootPart.CFrame = murderer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 4)
+        win:notify("MM2", "Téléporté au Murderer : " .. murderer.DisplayName)
+    else
+        win:notify("Error", "Murderer non trouvé (pas de couteau détecté)")
+    end
+end)
+
+win:addButton("TP to Sheriff", function()
+    local sheriff = getPlayerByRole("Sheriff")
+    if sheriff and sheriff.Character and sheriff.Character:FindFirstChild("HumanoidRootPart") then
+        rootPart.CFrame = sheriff.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 4)
+        win:notify("MM2", "Téléporté au Sheriff : " .. sheriff.DisplayName)
+    else
+        win:notify("Error", "Sheriff non trouvé (pas de pistolet détecté)")
+    end
+end)
+
 local droppedGunToggle = win:addToggle("Dropped Gun ESP", false, function(state)
     updatePresetToggle("Dropped Gun ESP", state)
     mm2Config.DroppedGunESP = state
