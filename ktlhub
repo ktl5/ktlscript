@@ -873,20 +873,48 @@ UserInputService.InputBegan:Connect(function(input, processed)
     -- Click TP Logic
     if clickTPEnabled and input.UserInputType == Enum.UserInputType.MouseButton1 and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
         local mouse = LocalPlayer:GetMouse()
-        if mouse.Target and rootPart then
+        if mouse.Target and not mouse.Target:IsDescendantOf(character) and rootPart then
             local oldPos = rootPart.Position
-            local targetPos = mouse.Hit.Position + Vector3.new(0, 3, 0)
-            local direction = (targetPos - oldPos).Unit
+            local hitPos = mouse.Hit.Position
+            
+            -- Correction si on est invisible (si le clic touche le clone sous la map)
+            if isInvisible and hitPos.Y < invisibilityConfig.TeleportHeight + 500 then
+                hitPos = hitPos + Vector3.new(0, -invisibilityConfig.TeleportHeight, 0)
+            end
 
-            -- Si la distance est suffisante pour calculer une direction
-            if (targetPos - oldPos).Magnitude > 0.1 then
-                rootPart.CFrame = CFrame.lookAt(targetPos, targetPos + direction)
-                -- Si on vole, on synchronise aussi le gyro pour éviter un snapback immédiat trop brutal
+            -- Raycast pour détecter la pente et ajuster la hauteur
+            local rayParam = RaycastParams.new()
+            rayParam.FilterDescendantsInstances = {character}
+            rayParam.FilterType = Enum.RaycastFilterType.Exclude
+            
+            -- On tire un rayon du dessus vers le point cliqué pour trouver la surface exacte
+            local rayResult = workspace:Raycast(hitPos + Vector3.new(0, 10, 0), Vector3.new(0, -20, 0), rayParam)
+            
+            local finalPos
+            if rayResult then
+                -- On se place 3.5 studs au-dessus de l'impact pour ne pas s'enfoncer dans les pentes
+                finalPos = rayResult.Position + Vector3.new(0, 3.5, 0)
+            else
+                finalPos = hitPos + Vector3.new(0, 3.5, 0)
+            end
+
+            local direction = (finalPos - oldPos).Unit
+
+            if (finalPos - oldPos).Magnitude > 0.1 then
+                -- On garde le personnage droit (Y constant dans lookAt) pour éviter de basculer sur les pentes
+                local lookTarget = finalPos + Vector3.new(direction.X, 0, direction.Z)
+                rootPart.CFrame = CFrame.lookAt(finalPos, lookTarget)
+                
                 if flying and gyro then
                     gyro.CFrame = rootPart.CFrame
                 end
             else
-                rootPart.CFrame = CFrame.new(targetPos)
+                rootPart.CFrame = CFrame.new(finalPos)
+            end
+            
+            -- Update surface position if invisible
+            if isInvisible then
+                invisibilityConfig.SurfaceCF = rootPart.CFrame
             end
         end
     end
