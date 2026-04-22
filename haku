@@ -1,5 +1,5 @@
 local scriptsToLoad = {
-    "https://pastebin.com/raw/RHeFvbqj",
+    "https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/ktlhub",
     "https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/test",
 }
 
