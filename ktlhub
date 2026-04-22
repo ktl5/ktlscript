@@ -950,6 +950,65 @@ local settingsTab = win:addTab("Settings")
 local optionsTab = win:addTab("Options")
 win:switchTab(optionsTab)
 
+-- REJOIN SAME SERVER
+win:addButton("Rejoin server", function()
+    local ts = game:GetService("TeleportService")
+    ts:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+end)
+
+-- REJOIN RANDOM SERVER
+win:addButton("Rejoin Random Server", function()
+    local ts = game:GetService("TeleportService")
+    local placeId = game.PlaceId
+    local servers = {}
+    local cursor = ""
+    
+    win:notify("Teleport", "Searching for a random server...")
+
+    local success, err = pcall(function()
+        -- On essaie de récupérer plus de serveurs avec différentes pages
+        for i = 1, 5 do
+            local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Desc&limit=100" .. (cursor ~= "" and "&cursor=" .. cursor or "")
+            local data = game:HttpGet(url)
+            local decoded = game:GetService("HttpService"):JSONDecode(data)
+
+            if decoded and decoded.data then
+                for _, srv in ipairs(decoded.data) do
+                    -- On vérifie que c'est un serveur différent et qu'il y a de la place
+                    if srv.id ~= game.JobId and srv.playing < srv.maxPlayers then
+                        table.insert(servers, srv)
+                    end
+                end
+            end
+
+            cursor = decoded.nextPageCursor or ""
+            if cursor == "" then break end
+        end
+    end)
+
+    if not success then
+        win:notify("Error", "Failed to fetch servers: " .. tostring(err))
+        return
+    end
+
+    if #servers > 0 then
+        local randomServer = servers[math.random(1, #servers)]
+        win:notify("Teleport", "Joining server: " .. randomServer.id)
+        
+        local tpSuccess, tpErr = pcall(function()
+            ts:TeleportToPlaceInstance(placeId, randomServer.id, LocalPlayer)
+        end)
+        
+        if not tpSuccess then
+            win:notify("Error", "Teleport failed, trying simple rejoin...")
+            ts:Teleport(placeId, LocalPlayer)
+        end
+    else
+        win:notify("Info", "No other servers found, rejoining current game...")
+        ts:Teleport(placeId, LocalPlayer)
+    end
+end)
+
 -- ANTI FLING
 local antiFlingEnabled = false
 local antiFlingConnection = nil
@@ -1176,67 +1235,6 @@ registerSlider("Field of View (FOV)", fovSlider, function(v)
     currentFOV = v
 end)
 
--- REJOIN RANDOM SERVER
-win:addButton("Rejoin Random Server", function()
-    local ts = game:GetService("TeleportService")
-    local placeId = game.PlaceId
-    local servers = {}
-    local cursor = ""
-    
-    win:notify("Teleport", "Searching for a random server...")
-
-    local success, err = pcall(function()
-        -- On essaie de récupérer plus de serveurs avec différentes pages
-        for i = 1, 5 do
-            local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Desc&limit=100" .. (cursor ~= "" and "&cursor=" .. cursor or "")
-            local data = game:HttpGet(url)
-            local decoded = game:GetService("HttpService"):JSONDecode(data)
-
-            if decoded and decoded.data then
-                for _, srv in ipairs(decoded.data) do
-                    -- On vérifie que c'est un serveur différent et qu'il y a de la place
-                    if srv.id ~= game.JobId and srv.playing < srv.maxPlayers then
-                        table.insert(servers, srv)
-                    end
-                end
-            end
-
-            cursor = decoded.nextPageCursor or ""
-            if cursor == "" then break end
-        end
-    end)
-
-    if not success then
-        win:notify("Error", "Failed to fetch servers: " .. tostring(err))
-        return
-    end
-
-    if #servers > 0 then
-        local randomServer = servers[math.random(1, #servers)]
-        win:notify("Teleport", "Joining server: " .. randomServer.id)
-        
-        local tpSuccess, tpErr = pcall(function()
-            ts:TeleportToPlaceInstance(placeId, randomServer.id, LocalPlayer)
-        end)
-        
-        if not tpSuccess then
-            win:notify("Error", "Teleport failed, trying simple rejoin...")
-            ts:Teleport(placeId, LocalPlayer)
-        end
-    else
-        win:notify("Info", "No other servers found, rejoining current game...")
-        ts:Teleport(placeId, LocalPlayer)
-    end
-end)
-
--- REJOIN SAME SERVER
-win:addButton("Rejoin server", function()
-    local ts = game:GetService("TeleportService")
-    ts:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
-end)
-
-
-
 -- Onglet Mouvement
 win:switchTab(mainTab)
 
@@ -1459,14 +1457,7 @@ win:switchTab(playersTab)
 local selectedPlayerForActions = nil
 local playerListObj
 local currentSearchText = ""
-
-playerListObj = win:addPlayerList(function(plr, selected)
-    if selected then
-        selectedPlayerForActions = plr
-    else
-        selectedPlayerForActions = nil
-    end
-end)
+local spectating = false
 
 win:addButton("Teleport to Selected", function()
     if selectedPlayerForActions and selectedPlayerForActions.Character and selectedPlayerForActions.Character:FindFirstChild("HumanoidRootPart") then
@@ -1483,8 +1474,7 @@ win:addButton("Teleport to Selected", function()
     end
 end)
 
-local spectating = false
-local spectateBtn = win:addButton("Spectate Selected", function()
+win:addButton("Spectate Selected", function()
     if spectating then
         spectating = false
         workspace.CurrentCamera.CameraSubject = humanoid
@@ -1494,7 +1484,15 @@ local spectateBtn = win:addButton("Spectate Selected", function()
         workspace.CurrentCamera.CameraSubject = selectedPlayerForActions.Character.Humanoid
         win:notify("Spectate", "Now spectating " .. selectedPlayerForActions.DisplayName)
     else
-        win:notify("Error", "No player")
+        win:notify("Error", "No player selected")
+    end
+end)
+
+playerListObj = win:addPlayerList(function(plr, selected)
+    if selected then
+        selectedPlayerForActions = plr
+    else
+        selectedPlayerForActions = nil
     end
 end)
 
