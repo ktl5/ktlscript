@@ -51,6 +51,97 @@ local function loadConfig()
 end
 
 local config = loadConfig()
+local autoLoadEnabled = config.AutoLoad or false
+
+-------------------------------------------------------------------------
+-- SYSTÈME DE PRESETS (TOGGLES & SLIDERS)
+-------------------------------------------------------------------------
+local presetFileName = "KTLHub_Presets.json"
+local currentPresets = {
+    Toggles = {},
+    Sliders = {}
+}
+
+-- Table pour stocker les objets UI afin de pouvoir les mettre à jour
+local uiElements = {
+    Toggles = {},
+    Sliders = {}
+}
+
+-- Table pour stocker les callbacks originaux (pour forcer la mise à jour)
+local uiCallbacks = {
+    Toggles = {},
+    Sliders = {}
+}
+
+local function saveCurrentPresets()
+    if writefile then
+        writefile(presetFileName, HttpService:JSONEncode(currentPresets))
+    end
+end
+
+local function loadGlobalPresets()
+    if isfile and isfile(presetFileName) then
+        local content = readfile(presetFileName)
+        local success, data = pcall(HttpService.JSONDecode, HttpService, content)
+        if success then 
+            currentPresets = data
+            -- Application des valeurs chargées aux éléments UI existants
+            for name, state in pairs(currentPresets.Toggles) do
+                if uiElements.Toggles[name] then
+                    pcall(function() 
+                        uiElements.Toggles[name].set(state) 
+                        if uiCallbacks.Toggles[name] then
+                            uiCallbacks.Toggles[name](state)
+                        end
+                    end)
+                end
+            end
+            for name, value in pairs(currentPresets.Sliders) do
+                if uiElements.Sliders[name] then
+                    pcall(function() 
+                        uiElements.Sliders[name].set(value)
+                        -- Forcer le callback enregistré manuellement
+                        if uiCallbacks.Sliders[name] then
+                            uiCallbacks.Sliders[name](value)
+                        end
+                    end)
+                end
+            end
+        end
+    end
+end
+
+-- Exécuter l'AutoLoad si activé
+task.spawn(function()
+    task.wait(2) -- Attendre que tout soit bien initialisé
+    if autoLoadEnabled then
+        loadGlobalPresets()
+        if win then
+            win:notify("AutoLoad", "Configuration chargée automatiquement !")
+        end
+    end
+end)
+
+-- Wrapper pour enregistrer les toggles et sliders sans casser lb
+local function registerToggle(name, obj, callback)
+    uiElements.Toggles[name] = obj
+    uiCallbacks.Toggles[name] = callback
+end
+
+local function registerSlider(name, obj, callback)
+    uiElements.Sliders[name] = obj
+    uiCallbacks.Sliders[name] = callback
+end
+
+-- Sauvegarde automatique dans la table des presets
+local function updatePresetToggle(name, state)
+    currentPresets.Toggles[name] = state
+end
+
+local function updatePresetSlider(name, value)
+    currentPresets.Sliders[name] = value
+end
 
 -- Patch pour enlever l'emoji refresh qui bug (carré vide) et ajouter la recherche fonctionnelle
 local oldAddPlayerList = lb.addPlayerList
@@ -863,7 +954,8 @@ win:switchTab(optionsTab)
 local antiFlingEnabled = false
 local antiFlingConnection = nil
 
-win:addToggle("Anti Fling", false, function(state)
+local antiFlingToggleObj = win:addToggle("Anti Fling", false, function(state)
+    updatePresetToggle("Anti Fling", state)
     antiFlingEnabled = state
     if state then
         antiFlingConnection = RunService.Stepped:Connect(function()
@@ -887,6 +979,10 @@ win:addToggle("Anti Fling", false, function(state)
         end
     end
 end)
+registerToggle("Anti Fling", antiFlingToggleObj, function(state)
+    antiFlingEnabled = state
+    -- La connexion Stepped est gérée par le callback principal, donc on ne fait rien ici
+end)
 
 -- FLING
 local flingEnabled = false
@@ -895,7 +991,8 @@ local flingBodyPos = nil
 local flingBodyGyro = nil
 local flingDiedConn = nil
 
-win:addToggle("Fling", false, function(state)
+local flingToggleObj_actual = win:addToggle("Fling", false, function(state)
+    updatePresetToggle("Fling", state)
     flingEnabled = state
     
     if state then
@@ -1034,6 +1131,9 @@ win:addToggle("Fling", false, function(state)
         flingBodyGyro = nil
     end
 end)
+registerToggle("Fling", flingToggleObj_actual, function(state)
+    flingEnabled = state
+end)
 
 -- ANTI AFK
 local VirtualUser = game:GetService("VirtualUser")
@@ -1059,12 +1159,20 @@ win:addToggle("Anti AFK", false, function(state)
 end)
 
 -- SLIDER MAX ZOOM
-win:addSlider("Max Zoom", 400, 5000, 400, function(v)
+local maxZoomSlider = win:addSlider("Max Zoom", 400, 5000, 400, function(v)
+    updatePresetSlider("Max Zoom", v)
+    LocalPlayer.CameraMaxZoomDistance = v
+end)
+registerSlider("Max Zoom", maxZoomSlider, function(v)
     LocalPlayer.CameraMaxZoomDistance = v
 end)
 
 -- SLIDER FOV
-win:addSlider("Field of View (FOV)", 70, 120, 70, function(v)
+local fovSlider = win:addSlider("Field of View (FOV)", 70, 120, 70, function(v)
+    updatePresetSlider("Field of View (FOV)", v)
+    currentFOV = v
+end)
+registerSlider("Field of View (FOV)", fovSlider, function(v)
     currentFOV = v
 end)
 
@@ -1133,53 +1241,102 @@ end)
 win:switchTab(mainTab)
 
 flyToggleObj = win:addToggle("Fly", false, function(state)
+    updatePresetToggle("Fly", state)
+    if state then startFlying() else stopFlying() end
+end)
+registerToggle("Fly", flyToggleObj, function(state)
     if state then startFlying() else stopFlying() end
 end)
 
 noclipToggleObj = win:addToggle("Noclip", false, function(state)
+    updatePresetToggle("Noclip", state)
+    noclipMode = state
+    updateNoclipLoop()
+end)
+registerToggle("Noclip", noclipToggleObj, function(state)
     noclipMode = state
     updateNoclipLoop()
 end)
 
 noclipCamToggleObj = win:addToggle("Noclip Camera", false, function(state)
+    updatePresetToggle("Noclip Camera", state)
+    noclipCamMode = state
+    LocalPlayer.DevCameraOcclusionMode = state and Enum.DevCameraOcclusionMode.Invisicam or Enum.DevCameraOcclusionMode.Zoom
+    updateNoclipLoop()
+end)
+registerToggle("Noclip Camera", noclipCamToggleObj, function(state)
     noclipCamMode = state
     LocalPlayer.DevCameraOcclusionMode = state and Enum.DevCameraOcclusionMode.Invisicam or Enum.DevCameraOcclusionMode.Zoom
     updateNoclipLoop()
 end)
 
-win:addSlider("Fly Speed", 50, 300, 50, function(v)
+local flySpeedSlider = win:addSlider("Fly Speed", 50, 300, 50, function(v)
+    updatePresetSlider("Fly Speed", v)
+    flySpeed = v
+end)
+registerSlider("Fly Speed", flySpeedSlider, function(v)
     flySpeed = v
 end)
 
-win:addSlider("WalkSpeed", 16, 100, 16, function(v)
+local walkSpeedSlider = win:addSlider("WalkSpeed", 16, 100, 16, function(v)
+    updatePresetSlider("WalkSpeed", v)
+    walkSpeed = v
+    if humanoid then
+        humanoid.WalkSpeed = walkSpeed
+    end
+end)
+registerSlider("WalkSpeed", walkSpeedSlider, function(v)
     walkSpeed = v
     if humanoid then
         humanoid.WalkSpeed = walkSpeed
     end
 end)
 
-win:addToggle("Click TP (Ctrl + Click)", false, function(state)
+local clickTPToggle = win:addToggle("Click TP (Ctrl + Click)", false, function(state)
+    updatePresetToggle("Click TP (Ctrl + Click)", state)
+    clickTPEnabled = state
+end)
+registerToggle("Click TP (Ctrl + Click)", clickTPToggle, function(state)
     clickTPEnabled = state
 end)
 
 invisibleToggleObj = win:addToggle("Invisibility (FE)", false, function(state)
+    updatePresetToggle("Invisibility (FE)", state)
+    toggleInvisibility(state)
+end)
+registerToggle("Invisibility (FE)", invisibleToggleObj, function(state)
     toggleInvisibility(state)
 end)
 
 -- Onglet Visuals
 win:switchTab(visualsTab)
 
-win:addToggle("Chams", false, function(state)
+local chamsToggle = win:addToggle("Chams", false, function(state)
+    updatePresetToggle("Chams", state)
+    visualsConfig.Chams = state
+    updateAllVisuals()
+end)
+registerToggle("Chams", chamsToggle, function(state)
     visualsConfig.Chams = state
     updateAllVisuals()
 end)
 
-win:addToggle("ESP", false, function(state)
+local espToggle = win:addToggle("ESP", false, function(state)
+    updatePresetToggle("ESP", state)
+    visualsConfig.ESP = state
+    updateAllVisuals()
+end)
+registerToggle("ESP", espToggle, function(state)
     visualsConfig.ESP = state
     updateAllVisuals()
 end)
 
-win:addToggle("Outline", false, function(state)
+local outlineToggle = win:addToggle("Outline", false, function(state)
+    updatePresetToggle("Outline", state)
+    visualsConfig.Outline = state
+    updateAllVisuals()
+end)
+registerToggle("Outline", outlineToggle, function(state)
     visualsConfig.Outline = state
     updateAllVisuals()
 end)
@@ -1187,7 +1344,8 @@ end)
 -- Onglet MM2
 win:switchTab(mm2Tab)
 
-win:addToggle("Dropped Gun ESP", false, function(state)
+local droppedGunToggle = win:addToggle("Dropped Gun ESP", false, function(state)
+    updatePresetToggle("Dropped Gun ESP", state)
     mm2Config.DroppedGunESP = state
     if not state then
         -- Clear ESP immediately when toggled off
@@ -1204,8 +1362,12 @@ win:addToggle("Dropped Gun ESP", false, function(state)
         end
     end
 end)
+registerToggle("Dropped Gun ESP", droppedGunToggle, function(state)
+    mm2Config.DroppedGunESP = state
+end)
 
-win:addToggle("Player ESP", false, function(state)
+local playerESPToggle = win:addToggle("Player ESP", false, function(state)
+    updatePresetToggle("Player ESP", state)
     mm2Config.PlayerESP = state
     if not state then
         for _, p in pairs(Players:GetPlayers()) do
@@ -1219,8 +1381,12 @@ win:addToggle("Player ESP", false, function(state)
         end
     end
 end)
+registerToggle("Player ESP", playerESPToggle, function(state)
+    mm2Config.PlayerESP = state
+end)
 
-win:addToggle("Player Outline", false, function(state)
+local playerOutlineToggle = win:addToggle("Player Outline", false, function(state)
+    updatePresetToggle("Player Outline", state)
     mm2Config.PlayerOutline = state
     if not state then
         for _, p in pairs(Players:GetPlayers()) do
@@ -1230,6 +1396,9 @@ win:addToggle("Player Outline", false, function(state)
             end
         end
     end
+end)
+registerToggle("Player Outline", playerOutlineToggle, function(state)
+    mm2Config.PlayerOutline = state
 end)
 
 win:addButton("Grab Gun", function()
@@ -1383,8 +1552,22 @@ end)
 
 -- Onglet Paramètres
 win:switchTab(settingsTab)
-win:addToggle("Dark Mode", true, function(state)
-    updateUITheme(state)
+
+win:addToggle("Auto Load Config", autoLoadEnabled, function(state)
+    autoLoadEnabled = state
+    config.AutoLoad = state
+    saveConfig(config)
+    win:notify("Config", "Auto Load " .. (state and "activé" or "désactivé"))
+end)
+
+win:addButton("Save Global Config", function()
+    saveCurrentPresets()
+    win:notify("Config", "Configuration globale sauvegardée !")
+end)
+
+win:addButton("Load Global Config", function()
+    loadGlobalPresets()
+    win:notify("Config", "Configuration globale chargée !")
 end)
 
 win:switchTab(mainTab)
