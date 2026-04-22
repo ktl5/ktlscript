@@ -311,7 +311,8 @@ end
 
 -- Sauvegarder la taille lors du changement
 win.mainFrame:GetPropertyChangedSignal("Size"):Connect(function()
-    if win._userResized then
+    -- On ne sauvegarde QUE si l'utilisateur a redimensionné ET que l'interface n'est pas minimisée
+    if win._userResized and not win._minimized then
         config.SizeX = win.mainFrame.Size.X.Offset
         config.SizeY = win.mainFrame.Size.Y.Offset
         saveConfig(config)
