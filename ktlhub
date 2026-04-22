@@ -247,17 +247,31 @@ lb.addPlayerList = function(self, labelOrCallback, callback)
                 if toggleMode then
                     if selectedPlayer == player then
                         selectedPlayer = nil
-                        card.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-                        if actionCallback then actionCallback(player, false) end
+                        actionCallback(player, false)
                     else
-                        if selectedPlayer then buildList() end -- Reset previous
+                        -- Désélectionner l'ancien joueur s'il existe
+                        local oldSelected = selectedPlayer
                         selectedPlayer = player
+                        
+                        -- On rafraîchit les couleurs des cartes sans reconstruire toute la liste
+                        for _, otherCard in pairs(listFrame:GetChildren()) do
+                            if otherCard:IsA("Frame") then
+                                otherCard.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+                            end
+                        end
                         card.BackgroundColor3 = Color3.fromRGB(20, 80, 30)
-                        if actionCallback then actionCallback(player, true) end
+                        
+                        if oldSelected then
+                            actionCallback(oldSelected, false)
+                        end
+                        actionCallback(player, true)
                     end
                 else
-                    if actionCallback then actionCallback(player) end
+                    actionCallback(player)
                 end
+                
+                -- Si on est en mode toggle, on ne reconstruit pas la liste pour éviter le lag
+                -- mais on met à jour les couleurs manuellement comme fait au-dessus
             end)
         end
         self:resize()
@@ -268,7 +282,9 @@ lb.addPlayerList = function(self, labelOrCallback, callback)
         buildList()
     end)
 
-    refreshBtn.MouseButton1Click:Connect(buildList)
+    refreshBtn.MouseButton1Click:Connect(function()
+        buildList()
+    end)
     buildList()
 
     if self._activeTab then table.insert(self._activeTab.items, wrapper) end
