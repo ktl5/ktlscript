@@ -1042,6 +1042,58 @@ win:addToggle("Player Outline", false, function(state)
     end
 end)
 
+win:addButton("Grab Gun", function()
+    local map = getMap()
+    local gun = map and map:FindFirstChild("GunDrop")
+    
+    if gun and rootPart then
+        local oldPos = rootPart.CFrame
+        win:notify("MM2", "Teleporting to gun...")
+        
+        rootPart.CFrame = gun.CFrame
+        
+        -- Wait for gun pickup (check backpack for Tool named "Gun")
+        local pickedUp = false
+        local connection
+        connection = LocalPlayer.Backpack.ChildAdded:Connect(function(item)
+            if item.Name == "Gun" then
+                pickedUp = true
+                connection:Disconnect()
+            end
+        end)
+        
+        -- Fallback if not picked up in 3 seconds
+        task.delay(3, function()
+            if connection then connection:Disconnect() end
+            if not pickedUp then
+                win:notify("MM2", "Returning to old position (Timeout or Gun not picked up)")
+                rootPart.CFrame = oldPos
+            end
+        end)
+        
+        -- If already picked up (shouldn't happen immediately but for safety)
+        if LocalPlayer.Backpack:FindFirstChild("Gun") or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Gun")) then
+            pickedUp = true
+            if connection then connection:Disconnect() end
+        end
+
+        -- Check every 0.1s if picked up
+        task.spawn(function()
+            while not pickedUp do
+                task.wait(0.1)
+                if not gun.Parent then -- Gun model disappeared from workspace
+                    pickedUp = true
+                end
+            end
+            task.wait(0.2) -- Small delay for stability
+            rootPart.CFrame = oldPos
+            win:notify("MM2", "Gun Secured! Teleported back.")
+        end)
+    else
+        win:notify("Error", "Dropped Gun not found on map!")
+    end
+end)
+
 -- Onglet Joueurs
 win:switchTab(playersTab)
 
