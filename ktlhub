@@ -945,9 +945,9 @@ local visualsTab = win:addTab("Visuals")
 local mm2Tab = win:addTab("MM2")
 local playersTab = win:addTab("Players")
 local toolsTab = win:addTab("Tools")
-local discordTab = win:addTab("Discord")
-local settingsTab = win:addTab("Settings")
 local optionsTab = win:addTab("Options")
+local settingsTab = win:addTab("Settings")
+local discordTab = win:addTab("Discord")
 win:switchTab(optionsTab)
 
 -- REJOIN SAME SERVER
