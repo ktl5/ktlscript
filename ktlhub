@@ -845,6 +845,170 @@ local settingsTab = win:addTab("Settings")
 local optionsTab = win:addTab("Options")
 win:switchTab(optionsTab)
 
+-- ANTI FLING
+local antiFlingEnabled = false
+local antiFlingConnection = nil
+
+win:addToggle("Anti Fling", false, function(state)
+    antiFlingEnabled = state
+    if state then
+        antiFlingConnection = RunService.Stepped:Connect(function()
+            if not antiFlingEnabled then return end
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    for _, v in pairs(p.Character:GetDescendants()) do
+                        if v:IsA("BasePart") then
+                            v.CanCollide = false
+                            v.Velocity = Vector3.new(0, 0, 0)
+                            v.RotVelocity = Vector3.new(0, 0, 0)
+                        end
+                    end
+                end
+            end
+        end)
+    else
+        if antiFlingConnection then
+            antiFlingConnection:Disconnect()
+            antiFlingConnection = nil
+        end
+    end
+end)
+
+-- FLING
+local flingEnabled = false
+local flingBodyAV = nil
+local flingBodyPos = nil
+local flingBodyGyro = nil
+local flingDiedConn = nil
+
+win:addToggle("Fling", false, function(state)
+    flingEnabled = state
+    
+    if state then
+        if not character or not rootPart then return end
+        
+        -- Propriétés physiques massives pour le fling
+        for _, child in pairs(character:GetDescendants()) do
+            if child:IsA("BasePart") then
+                child.CustomPhysicalProperties = PhysicalProperties.new(100, 0.3, 0.5)
+                child.CanCollide = false
+                child.Massless = true
+                child.Velocity = Vector3.new(0, 0, 0)
+            end
+        end
+
+        -- Activation du Noclip interne
+        noclipMode = true
+        updateNoclipLoop()
+
+        -- Maintien de la position verticale pour éviter de tomber/s'envoler
+        flingBodyPos = Instance.new("BodyPosition")
+        flingBodyPos.Name = "KTL_FlingPos"
+        flingBodyPos.Parent = rootPart
+        flingBodyPos.MaxForce = Vector3.new(0, math.huge, 0)
+        flingBodyPos.P = 10000
+        flingBodyPos.Position = rootPart.Position
+
+        -- Maintien du personnage DROIT (crucial pour ne pas s'envoler comme un hélicoptère)
+        flingBodyGyro = Instance.new("BodyGyro")
+        flingBodyGyro.Name = "KTL_FlingGyro"
+        flingBodyGyro.Parent = rootPart
+        flingBodyGyro.MaxTorque = Vector3.new(math.huge, 0, math.huge) -- Verrouille l'inclinaison X et Z
+        flingBodyGyro.P = 1000000
+        flingBodyGyro.CFrame = rootPart.CFrame
+
+        -- Création de la rotation pulsée
+        flingBodyAV = Instance.new("BodyAngularVelocity")
+        flingBodyAV.Name = "KTL_Fling"
+        flingBodyAV.Parent = rootPart
+        flingBodyAV.MaxTorque = Vector3.new(0, math.huge, 0)
+        flingBodyAV.P = math.huge
+        
+        -- Gestion de la mort
+        local hum = character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            flingDiedConn = hum.Died:Connect(function()
+                if flingEnabled then
+                    flingEnabled = false
+                end
+            end)
+        end
+
+        -- Boucle de pulsation et de stabilisation
+        task.spawn(function()
+            while flingEnabled and rootPart and flingBodyAV do
+                -- Stabilisation constante
+                if flingBodyPos then
+                    flingBodyPos.Position = Vector3.new(0, rootPart.Position.Y, 0)
+                end
+                
+                -- On reset la vélocité linéaire pour ne pas être expulsé par la rotation
+                rootPart.Velocity = Vector3.new(0, 0, 0)
+                for _, child in pairs(character:GetDescendants()) do
+                    if child:IsA("BasePart") then
+                        child.CanCollide = false -- On force le noclip à chaque cycle
+                    end
+                end
+
+                flingBodyAV.AngularVelocity = Vector3.new(0, 99999, 0)
+                task.wait(0.2)
+                if not flingEnabled or not flingBodyAV then break end
+                flingBodyAV.AngularVelocity = Vector3.new(0, 0, 0)
+                task.wait(0.1)
+            end
+        end)
+    else
+        -- Désactivation (Unfling)
+        flingEnabled = false -- Sécurité supplémentaire
+
+        if flingDiedConn then
+            flingDiedConn:Disconnect()
+            flingDiedConn = nil
+        end
+
+        -- 1. On détruit les forces d'abord
+        if rootPart then
+            for _, v in pairs(rootPart:GetChildren()) do
+                if v:IsA("BodyAngularVelocity") or v:IsA("BodyPosition") or v:IsA("BodyGyro") then
+                    if v.Name:find("KTL_Fling") then
+                        v:Destroy()
+                    end
+                end
+            end
+            
+            -- 2. On stoppe immédiatement tout mouvement résiduel
+            rootPart.Velocity = Vector3.new(0, 0, 0)
+            rootPart.RotVelocity = Vector3.new(0, 0, 0)
+        end
+
+        -- 3. On restaure les propriétés physiques
+        if character then
+            for _, child in pairs(character:GetDescendants()) do
+                if child:IsA("BasePart") then
+                    child.CustomPhysicalProperties = PhysicalProperties.new(0.7, 0.3, 0.5)
+                    child.Massless = false -- On remet la masse normale
+                end
+            end
+        end
+
+        -- 4. On attend un tout petit peu que la physique se stabilise avant de remettre les collisions
+        task.wait(0.1)
+        
+        noclipMode = false
+        updateNoclipLoop()
+
+        -- 5. Deuxième reset de vélocité pour être sûr
+        if rootPart then
+            rootPart.Velocity = Vector3.new(0, 0, 0)
+            rootPart.RotVelocity = Vector3.new(0, 0, 0)
+        end
+        
+        flingBodyAV = nil
+        flingBodyPos = nil
+        flingBodyGyro = nil
+    end
+end)
+
 -- ANTI AFK
 local VirtualUser = game:GetService("VirtualUser")
 local antiAfkEnabled = false
