@@ -1540,6 +1540,10 @@ win:addButton("Skin Stealer (Y)", function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/frenchvoice"))()
 end)
 
+win:addButton("FE Fling Gui Trollface Edition", function()
+    loadstring(game:HttpGet("https://pastebin.com/raw/KPG5hjqb"))()
+end)
+
 win:addButton("Emote FE (B)", function()
     loadstring(game:HttpGet("https://pastebin.com/raw/hSZavneE"))()
 end)
