@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <!-- saved from url=(0043)file:///C:/Users/the60/Downloads/index.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -225,13 +226,14 @@ body{font-family:var(--ff-body)}
     <!-- Activities -->
     <div class="activities" id="actc">
       <div class="act-item">
-        <div class="act-thumb">🎮</div>
-        <div class="act-info">
-          <div class="act-name">Roblox</div>
-          <div class="act-detail">Blox Fruits — Level 2800 (Max)</div>
-          <div class="act-state" id="act-elapsed">Playing for 46:20</div>
+        <div class="act-thumb">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" style="opacity: 0.8;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
         </div>
-        <div class="act-badge">Playing</div>
+        <div class="act-info">
+          <div class="act-name">Location</div>
+          <div class="act-detail">Bercy</div>
+        </div>
+        <div class="act-badge">Paris</div>
       </div>
     </div>
 
@@ -294,9 +296,9 @@ body{font-family:var(--ff-body)}
     <div class="side-block">
       <div class="tags-wrap">
         <span class="tag">Lua / Luau</span>
-        <span class="tag">Roblox</span>
         <span class="tag">Anime</span>
         <span class="tag">Xbox User</span>
+        <span class="tag">Roblox Player</span>
         <span class="tag">Hetero</span>
       </div>
     </div>
@@ -384,26 +386,29 @@ body{font-family:var(--ff-body)}
    ABSENT.WTF — Complete JS
 ═══════════════════════════════════════════════ */
 
-// ── BACKGROUND CANVAS (Clean Aura + Particles) ──
+// ── BACKGROUND CANVAS (Enhanced Aura + Interactive Particles) ──
 (function initBg() {
   const canvas = document.getElementById('bg-canvas');
   const ctx = canvas.getContext('2d');
   let t = 0;
   let mouse = { x: -1000, y: -1000 };
 
+  // Enhanced blobs with more dynamic movement and colors
   const blobs = [
-    { x: 0.2, y: 0.2, r: 0.6, h: 260, s: 0.4, speed: 0.00015 },
-    { x: 0.8, y: 0.8, r: 0.7, h: 285, s: 0.3, speed: 0.00012 },
-    { x: 0.5, y: 0.5, r: 0.5, h: 240, s: 0.2, speed: 0.00018 }
+    { x: 0.2, y: 0.2, r: 0.7, h: 260, s: 0.5, speed: 0.0004, ampX: 0.2, ampY: 0.15 },
+    { x: 0.8, y: 0.8, r: 0.8, h: 285, s: 0.4, speed: 0.0003, ampX: 0.18, ampY: 0.2 },
+    { x: 0.5, y: 0.5, r: 0.6, h: 240, s: 0.3, speed: 0.0005, ampX: 0.1, ampY: 0.1 }
   ];
 
-  const particles = Array.from({ length: 30 }, () => ({
+  // More particles with varied sizes and movement
+  const particles = Array.from({ length: 40 }, () => ({
     x: Math.random(),
     y: Math.random(),
-    s: 0.4 + Math.random() * 0.7,
-    o: 0.1 + Math.random() * 0.3,
-    vx: (Math.random() - 0.5) * 0.0004,
-    vy: (Math.random() - 0.5) * 0.0004
+    s: 0.5 + Math.random() * 1.2,
+    o: 0.1 + Math.random() * 0.4,
+    vx: (Math.random() - 0.5) * 0.0008,
+    vy: (Math.random() - 0.5) * 0.0008,
+    pulse: Math.random() * Math.PI
   }));
 
   function resize() {
@@ -419,46 +424,62 @@ body{font-family:var(--ff-body)}
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 1. Draw Enhanced Aura Blobs (Screen blending)
     ctx.globalCompositeOperation = 'screen';
-
-    // 1. Draw Subtle Blobs
     blobs.forEach(b => {
-      const bx = (b.x + Math.sin(t * b.speed + b.h) * 0.15) * canvas.width;
-      const by = (b.y + Math.cos(t * b.speed * 0.8 + b.h) * 0.12) * canvas.height;
+      const bx = (b.x + Math.sin(t * b.speed + b.h) * b.ampX) * canvas.width;
+      const by = (b.y + Math.cos(t * b.speed * 0.8 + b.h) * b.ampY) * canvas.height;
       const br = b.r * Math.max(canvas.width, canvas.height);
+      
       const g = ctx.createRadialGradient(bx, by, 0, bx, by, br);
-      g.addColorStop(0, `hsla(${b.h}, 50%, 65%, 0.06)`);
-      g.addColorStop(0.5, `hsla(${b.h}, 40%, 50%, 0.02)`);
+      g.addColorStop(0, `hsla(${b.h}, 60%, 70%, 0.12)`);
+      g.addColorStop(0.4, `hsla(${b.h}, 50%, 60%, 0.04)`);
       g.addColorStop(1, 'transparent');
+      
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     });
 
-    // 2. Draw Floating Particles
+    // 2. Draw Interactive Floating Particles
     ctx.globalCompositeOperation = 'source-over';
     particles.forEach(p => {
+      // Natural movement
       p.x += p.vx;
       p.y += p.vy;
-      if (p.x < 0) p.x = 1; if (p.x > 1) p.x = 0;
-      if (p.y < 0) p.y = 1; if (p.y > 1) p.y = 0;
+      
+      // Wrap around screen
+      if (p.x < -0.1) p.x = 1.1; if (p.x > 1.1) p.x = -0.1;
+      if (p.y < -0.1) p.y = 1.1; if (p.y > 1.1) p.y = -0.1;
 
       let px = p.x * canvas.width;
       let py = p.y * canvas.height;
 
-      // Mouse interaction
+      // Mouse interaction (repulsion)
       const dx = mouse.x - px;
       const dy = mouse.y - py;
       const dist = Math.sqrt(dx*dx + dy*dy);
-      if (dist < 250) {
-        const force = (250 - dist) / 250;
-        px -= dx * force * 0.03;
-        py -= dy * force * 0.03;
+      if (dist < 300) {
+        const force = (300 - dist) / 300;
+        px -= dx * force * 0.08;
+        py -= dy * force * 0.08;
       }
 
-      ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`;
+      // Pulse effect
+      const currentOpacity = p.o * (0.6 + Math.sin(t * 0.02 + p.pulse) * 0.4);
+      
+      ctx.fillStyle = `rgba(255, 255, 255, ${currentOpacity})`;
       ctx.beginPath();
       ctx.arc(px, py, p.s, 0, Math.PI * 2);
       ctx.fill();
+
+      // Occasional small glow around particles
+      if (p.s > 1.2) {
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
     });
 
     t++;
@@ -789,22 +810,6 @@ window.addEventListener('load', () => {
   // Start paused, show play icon
   plyPause.style.display = 'none';
   plyPlay.style.display  = '';
-})();
-
-// ── ACTIVITY ELAPSED ───────────────────────────
-(function initActivity() {
-  const startTime = Date.now() - 37 * 60 * 1000; // started 37min ago
-  const el = document.getElementById('act-elapsed');
-  function tick() {
-    const s = Math.floor((Date.now() - startTime) / 1000);
-    const m = Math.floor(s / 60), ss = s % 60;
-    const h = Math.floor(m / 60), mm = m % 60;
-    el.textContent = h > 0
-      ? `Playing for ${h}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`
-      : `Playing for ${mm}:${String(ss).padStart(2,'0')}`;
-  }
-  tick();
-  setInterval(tick, 1000);
 })();
 
 // ── VIEWS TOOLTIP ──────────────────────────────
