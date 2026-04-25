@@ -104,11 +104,10 @@ body{font-family:var(--ff-body)}
 .act-badge{font-family:var(--ff-head);font-size:9px;font-weight:700;letter-spacing:.1em;color:rgba(180,160,255,.9);background:rgba(180,160,255,.1);border:1px solid rgba(180,160,255,.2);border-radius:20px;padding:2px 7px;flex-shrink:0;text-transform:uppercase}
 
 /* ── SPOTIFY CARD ── */
-#sp-card{width:100%;border-radius:18px;overflow:hidden;flex-direction:column;background:#000;border:1px solid rgba(30,215,96,.2);box-shadow:0 8px 40px rgba(0,0,0,.7),0 0 0 1px rgba(30,215,96,.06) inset}
-#sp-banner{position:relative;width:100%;height:100px;overflow:hidden;flex-shrink:0}
-#sp-blur{position:absolute;inset:-20px;background-size:cover;background-position:center;filter:blur(24px) brightness(.45);transform:scale(1.1);background-image:linear-gradient(135deg,#1db954,#191414,#6d4fc2)}
+#sp-card{width:100%;background:rgba(255,255,255,.03);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.12);border-radius:18px;overflow:hidden;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.7)}
+#sp-banner{position:relative;width:100%;overflow:hidden;flex-shrink:0}
 #sp-top{position:relative;z-index:1;display:flex;align-items:center;gap:12px;padding:14px 14px 10px}
-#sp-art{width:58px;height:58px;border-radius:8px;object-fit:cover;flex-shrink:0;box-shadow:0 4px 20px rgba(0,0,0,.6);background:linear-gradient(135deg,#1db954 0%,#191414 100%);display:flex;align-items:center;justify-content:center;font-size:26px}
+#sp-art{width:58px;height:58px;border-radius:8px;object-fit:cover;flex-shrink:0;box-shadow:0 4px 20px rgba(0,0,0,.6);background:linear-gradient(135deg,#1db954 0%,#191414 100%);display:flex;align-items:center;justify-content:center;font-size:26px;background-size:cover;background-position:center}
 #sp-meta{flex:1;min-width:0}
 #sp-tag{display:flex;align-items:center;gap:5px;margin-bottom:4px}
 #sp-tag svg{width:11px;height:11px;fill:#1ed760}
@@ -273,19 +272,16 @@ body{font-family:var(--ff-body)}
 
     <!-- Spotify Card -->
     <div id="sp-card" style="display:flex">
-      <div id="sp-banner">
-        <div id="sp-blur"></div>
-        <div id="sp-top">
-          <div id="sp-art">🎵</div>
-          <div id="sp-meta">
-            <div id="sp-tag">
-              <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 0 1-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 1 1-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 0 1 .207.857zm1.223-2.722a.779.779 0 0 1-1.072.257c-2.687-1.652-6.785-2.131-9.965-1.166a.779.779 0 1 1-.453-1.49c3.633-1.105 8.147-.569 11.233 1.328a.779.779 0 0 1 .257 1.071zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 1 1-.543-1.79c3.532-1.072 9.404-.866 13.115 1.337a.934.934 0 0 1-1.955.61z"></path></svg>
-              <span>Listening on Spotify</span>
-              <div id="sp-bars"><span></span><span></span><span></span></div>
-            </div>
-            <div id="sp-title">JRK 19</div>
-            <div id="sp-artist">ambient</div>
+      <div id="sp-top">
+        <div id="sp-art" style="background-image: url('https://cdn.discordapp.com/attachments/1475117893355307109/1497730580664815636/image.png?ex=69ee95cc&is=69ed444c&hm=06c626fe742780f825cd398a99813e17accea6b970dfe2547cab5e2b2cdbaf80')"></div>
+        <div id="sp-meta">
+          <div id="sp-tag">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 0 1-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 1 1-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 0 1 .207.857zm1.223-2.722a.779.779 0 0 1-1.072.257c-2.687-1.652-6.785-2.131-9.965-1.166a.779.779 0 1 1-.453-1.49c3.633-1.105 8.147-.569 11.233 1.328a.779.779 0 0 1 .257 1.071zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 1 1-.543-1.79c3.532-1.072 9.404-.866 13.115 1.337a.934.934 0 0 1-1.955.61z"></path></svg>
+            <span>Listening on Spotify</span>
+            <div id="sp-bars"><span></span><span></span><span></span></div>
           </div>
+          <div id="sp-title">JRK 19</div>
+          <div id="sp-artist">ambient</div>
         </div>
       </div>
       <div id="sp-prog-wrap">
