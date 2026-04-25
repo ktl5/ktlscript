@@ -49,6 +49,37 @@ body{font-family:var(--ff-body)}
 .status-dot.dnd{background:#f23f43;box-shadow:0 0 0 3px rgba(242,63,67,.2),0 0 10px rgba(242,63,67,.4)}
 .status-dot.offline{background:#4e5157}
 
+/* ── LANDING OVERLAY ── */
+#landing-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+}
+#landing-overlay.hide {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.enter-text {
+  font-family: var(--ff-head);
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  animation: pulse-text 2s infinite;
+}
+@keyframes pulse-text {
+  0%, 100% { opacity: 0.4; transform: scale(0.98); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
 /* ── PROFILE META ── */
 .profile-meta{flex:1;min-width:0}
 .profile-name{font-family:var(--ff-head);font-size:22px;font-weight:800;color:rgba(255,255,255,.98);letter-spacing:-.01em;display:flex;align-items:center;gap:8px;flex-wrap:wrap;text-shadow:0 0 30px rgba(255,255,255,.25);margin-bottom:5px}
@@ -195,7 +226,10 @@ body{font-family:var(--ff-body)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 </style>
 <style>@keyframes shoot{0%{opacity:1;transform:rotate(-35deg) translateX(0)}100%{opacity:0;transform:rotate(-35deg) translateX(-300px)}}</style></head>
-<body>
+<body class="loading">
+<div id="landing-overlay">
+  <div class="enter-text">Click to enter</div>
+</div>
 
 <!-- ══ MAIN ══ -->
 <div id="main">
@@ -380,7 +414,7 @@ body{font-family:var(--ff-body)}
   </div>
 </div>
 
-<audio id="aud" src="https://files.catbox.moe/hj4sqj.mp3" preload="metadata" crossorigin="anonymous"></audio>
+<audio id="aud" src="https://files.catbox.moe/hj4sqj.mp3" preload="auto" autoplay crossorigin="anonymous"></audio>
 <script>
 /* ═══════════════════════════════════════════════
    ABSENT.WTF — Complete JS
@@ -807,7 +841,28 @@ window.addEventListener('load', () => {
     document.getElementById('vlb').style.opacity = audio.muted ? '.35' : '1';
   });
 
-  // Start paused, show play icon
+  // ── AUTOPLAY LOGIC ──
+  const landing = document.getElementById('landing-overlay');
+  
+  const startAudio = () => {
+    AudioState.init();
+    audio.muted = false;
+    audio.currentTime = 0;
+    audio.play()
+      .then(() => {
+        setPlaying(true);
+        if (landing) landing.classList.add('hide');
+      })
+      .catch(err => {
+        console.warn("Playback failed even after click:", err);
+      });
+  };
+
+  if (landing) {
+    landing.addEventListener('click', startAudio);
+  }
+
+  // Initial UI state
   plyPause.style.display = 'none';
   plyPlay.style.display  = '';
 })();
