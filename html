@@ -703,20 +703,22 @@ const VisState = { playing: false };
   const fraction = phase / SYNODIC;
   // Illumination: cos formula
   const illum = Math.round((1 - Math.cos(fraction * 2 * Math.PI)) / 2 * 100);
+  
+  // Northern Hemisphere (France) Moon Phase Emoji mapping
   const phases = [
     [0,   1.85, '🌑 New Moon'],
     [1.85, 7.38, '🌒 Waxing Crescent'],
     [7.38, 9.22, '🌓 First Quarter'],
-    [9.22,14.77, '🌔 Waxing Gibbous'],
-    [14.77,16.61,'🌕 Full Moon'],
-    [16.61,22.15,'🌖 Waning Gibbous'],
-    [22.15,24.0, '🌗 Last Quarter'],
-    [24.0, 29.53,'🌘 Waning Crescent'],
+    [9.22, 14.77, '🌔 Waxing Gibbous'],
+    [14.77, 16.61, '🌕 Full Moon'],
+    [16.61, 22.15, '🌖 Waning Gibbous'],
+    [22.15, 24.0, '🌗 Last Quarter'],
+    [24.0, 29.53, '🌘 Waning Crescent'],
   ];
   let name = '🌑 New Moon';
   for (const [lo, hi, n] of phases) { if (phase >= lo && phase < hi) { name = n; break; } }
   document.getElementById('moon-phase-name').textContent = name;
-  document.getElementById('moon-illum').textContent = `${illum}% illuminated`;
+  document.getElementById('moon-illum').textContent = `${illum}% illuminée (France)`;
 })();
 
 // ── PANEL POSITIONING ──────────────────────────
@@ -765,6 +767,48 @@ window.addEventListener('load', () => {
   const plyPause  = document.getElementById('ply-pause');
   const plyPlay   = document.getElementById('ply-play');
   const trackName = document.getElementById('tn');
+  const spArt     = document.getElementById('sp-art');
+  const spTitle   = document.getElementById('sp-title');
+  const spArtist  = document.getElementById('sp-artist');
+
+  const playlist = [
+    {
+      src: "https://files.catbox.moe/hj4sqj.mp3",
+      title: "Le Plan 2",
+      artist: "JRK 19",
+      cover: "https://cdn.discordapp.com/attachments/1475117893355307109/1497730580664815636/image.png?ex=69ee95cc&is=69ed444c&hm=06c626fe742780f825cd398a99813e17accea6b970dfe2547cab5e2b2cdbaf80"
+    },
+    {
+      src: "https://files.catbox.moe/a1vpyv.mp3",
+      title: "Never Lose Me",
+      artist: "1PLIKE140",
+      cover: "https://cdn.discordapp.com/attachments/1475117893355307109/1497899334409261116/image.png?ex=69ef32f6&is=69ede176&hm=c793b94d4a818566e978b79a5b53a2eaf1f42880f430a0233b7548e6fe014c20"
+    }
+  ];
+
+  let currentTrack = 0;
+
+  function loadTrack(index) {
+    const track = playlist[index];
+    audio.src = track.src;
+    trackName.textContent = track.title;
+    spTitle.textContent = track.title;
+    spArtist.textContent = track.artist;
+    spArt.style.backgroundImage = `url('${track.cover}')`;
+    audio.load();
+  }
+
+  function nextTrack() {
+    currentTrack = (currentTrack + 1) % playlist.length;
+    loadTrack(currentTrack);
+    audio.play().then(() => setPlaying(true));
+  }
+
+  function prevTrack() {
+    currentTrack = (currentTrack - 1 + playlist.length) % playlist.length;
+    loadTrack(currentTrack);
+    audio.play().then(() => setPlaying(true));
+  }
 
   function fmt(s) {
     if (isNaN(s)) return '0:00';
@@ -810,7 +854,7 @@ window.addEventListener('load', () => {
   }
 
   // Sync UI if audio ends or is paused externally
-  audio.addEventListener('ended',  () => setPlaying(false));
+  audio.addEventListener('ended', nextTrack);
   audio.addEventListener('pause',  () => setPlaying(false));
   audio.addEventListener('playing',() => setPlaying(true));
 
@@ -823,13 +867,9 @@ window.addEventListener('load', () => {
     audio.currentTime = (e.clientX - r.left) / r.width * audio.duration;
   });
 
-  // Previous / Next (restart or skip 10s)
-  document.getElementById('prv').addEventListener('click', () => {
-    audio.currentTime = audio.currentTime > 3 ? 0 : Math.max(0, audio.currentTime - 10);
-  });
-  document.getElementById('nxt').addEventListener('click', () => {
-    audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 30);
-  });
+  // Previous / Next (Playlist navigation)
+  document.getElementById('prv').addEventListener('click', prevTrack);
+  document.getElementById('nxt').addEventListener('click', nextTrack);
 
   // Volume toggle (mute/unmute)
   document.getElementById('vlb').addEventListener('click', () => {
@@ -859,6 +899,7 @@ window.addEventListener('load', () => {
   }
 
   // Initial UI state
+  loadTrack(0);
   plyPause.style.display = 'none';
   plyPlay.style.display  = '';
 })();
