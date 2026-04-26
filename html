@@ -788,27 +788,55 @@ window.addEventListener('load', () => {
 
   let currentTrack = 0;
 
-  function loadTrack(index) {
-    const track = playlist[index];
-    audio.src = track.src;
-    trackName.textContent = track.title;
-    spTitle.textContent = track.title;
-    spArtist.textContent = track.artist;
-    spArt.style.backgroundImage = `url('${track.cover}')`;
-    audio.load();
-  }
+  function loadTrack(index, shouldPlay = false) {
+     const track = playlist[index];
+     
+     // Update UI first (instant feedback)
+     trackName.textContent = track.title;
+     spTitle.textContent = track.title;
+     spArtist.textContent = track.artist;
+     spArt.style.backgroundImage = `url('${track.cover}')`;
+     
+     // Change source only if different
+     if (audio.getAttribute('src') !== track.src) {
+       audio.src = track.src;
+     }
 
-  function nextTrack() {
-    currentTrack = (currentTrack + 1) % playlist.length;
-    loadTrack(currentTrack);
-    audio.play().then(() => setPlaying(true));
-  }
+     if (shouldPlay) {
+       const playPromise = audio.play();
+       if (playPromise !== undefined) {
+         playPromise.then(() => setPlaying(true)).catch(err => {
+           console.error('Playback failed:', err);
+           setPlaying(false);
+         });
+       }
+     }
+   }
 
-  function prevTrack() {
-    currentTrack = (currentTrack - 1 + playlist.length) % playlist.length;
-    loadTrack(currentTrack);
-    audio.play().then(() => setPlaying(true));
-  }
+   function nextTrack() {
+     currentTrack = (currentTrack + 1) % playlist.length;
+     loadTrack(currentTrack, true);
+     preloadNext();
+   }
+
+   function prevTrack() {
+     currentTrack = (currentTrack - 1 + playlist.length) % playlist.length;
+     loadTrack(currentTrack, true);
+     preloadNext();
+   }
+
+   // Preload the next track in the background
+   function preloadNext() {
+     const nextIdx = (currentTrack + 1) % playlist.length;
+     const link = document.createElement('link');
+     link.rel = 'preload';
+     link.as = 'audio';
+     link.href = playlist[nextIdx].src;
+     // Remove old preloads to avoid memory leaks
+     const oldLinks = document.querySelectorAll('link[rel="preload"][as="audio"]');
+     oldLinks.forEach(l => l.remove());
+     document.head.appendChild(link);
+   }
 
   function fmt(s) {
     if (isNaN(s)) return '0:00';
@@ -900,6 +928,7 @@ window.addEventListener('load', () => {
 
   // Initial UI state
   loadTrack(0);
+  preloadNext();
   plyPause.style.display = 'none';
   plyPlay.style.display  = '';
 })();
