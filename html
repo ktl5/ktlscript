@@ -26,13 +26,13 @@ body{font-family:var(--ff-body)}
 #content{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 20px;width:100%;max-width:460px;overflow:visible}
 
 /* ── PROFILE CARD ── */
-.profile-card{width:100%;background:rgba(255,255,255,.035);backdrop-filter:blur(40px) saturate(160%);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:22px 22px 18px;box-shadow:0 8px 48px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04) inset,0 1px 0 rgba(255,255,255,.08) inset}
+.profile-card{width:100%;background:rgba(255,255,255,.035);backdrop-filter:blur(20px) saturate(160%);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:22px 22px 18px;box-shadow:0 8px 48px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04) inset,0 1px 0 rgba(255,255,255,.08) inset;will-change:transform,opacity;transform:translateZ(0)}
 .profile-top{display:flex;align-items:center;gap:18px;margin-bottom:16px}
 
 /* ── AVATAR ── */
 .avatar-wrap{position:relative;flex-shrink:0;width:76px;height:76px}
-.avatar-aura{position:absolute;inset:-14px;border-radius:50%;background:radial-gradient(circle,rgba(180,160,255,.35) 0%,transparent 70%);filter:blur(20px);animation:aura-pulse 4s ease-in-out infinite}
-@keyframes aura-pulse{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:.7;transform:scale(1.15)}}
+.avatar-aura{position:absolute;inset:-14px;border-radius:50%;background:radial-gradient(circle,rgba(180,160,255,.35) 0%,transparent 70%);filter:blur(20px);animation:aura-pulse 4s ease-in-out infinite;will-change:opacity}
+@keyframes aura-pulse{0%,100%{opacity:.3}50%{opacity:.7}}
 .avatar-ring{position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(255,255,255,.25);box-shadow:0 0 28px rgba(180,160,255,.2)}
 .avatar-img{width:76px;height:76px;border-radius:50%;object-fit:cover;position:relative;z-index:1;display:block}
 /* CSS fallback avatar */
@@ -97,7 +97,7 @@ body{font-family:var(--ff-body)}
 
 /* ── ACTIVITIES ── */
 .activities{width:100%;display:flex;flex-direction:column;gap:8px}
-.act-item{width:100%;background:rgba(255,255,255,.03);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,.3);transition:border-color .3s,background .3s}
+.act-item{width:100%;background:rgba(255,255,255,.03);backdrop-filter:blur(15px);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,.3);transition:border-color .3s,background .3s;will-change:transform,opacity;transform:translateZ(0)}
 .act-item:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.05)}
 .act-thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:22px}
 .act-info{flex:1;min-width:0}
@@ -107,7 +107,7 @@ body{font-family:var(--ff-body)}
 .act-badge{font-family:var(--ff-head);font-size:9px;font-weight:700;letter-spacing:.1em;color:rgba(180,160,255,.9);background:rgba(180,160,255,.1);border:1px solid rgba(180,160,255,.2);border-radius:20px;padding:2px 7px;flex-shrink:0;text-transform:uppercase}
 
 /* ── SPOTIFY CARD ── */
-#sp-card{width:100%;background:rgba(255,255,255,.03);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.12);border-radius:18px;overflow:hidden;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.7)}
+#sp-card{width:100%;background:rgba(255,255,255,.03);backdrop-filter:blur(15px);border:1px solid rgba(255,255,255,.12);border-radius:18px;overflow:hidden;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.7)}
 #sp-banner{position:relative;width:100%;overflow:hidden;flex-shrink:0}
 #sp-top{position:relative;z-index:1;display:flex;align-items:center;gap:12px;padding:14px 14px 10px}
 #sp-art{width:58px;height:58px;border-radius:8px;object-fit:cover;flex-shrink:0;box-shadow:0 4px 20px rgba(0,0,0,.6);background:linear-gradient(135deg,#1db954 0%,#191414 100%);display:flex;align-items:center;justify-content:center;font-size:26px;background-size:cover;background-position:center}
@@ -141,7 +141,7 @@ body{font-family:var(--ff-body)}
 .views-tip.show{opacity:1;transform:translateX(-50%) scale(1)}
 
 /* ── PLAYER ── */
-#player{position:fixed;bottom:0;left:0;right:0;height:var(--player-h);z-index:100;background:rgba(8,8,10,.92);backdrop-filter:blur(40px) saturate(180%);border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;box-shadow:0 -8px 40px rgba(0,0,0,.7),0 -1px 0 rgba(255,255,255,.04)}
+#player{position:fixed;bottom:0;left:0;right:0;height:var(--player-h);z-index:100;background:rgba(8,8,10,.92);backdrop-filter:blur(20px) saturate(180%);border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;box-shadow:0 -8px 40px rgba(0,0,0,.7),0 -1px 0 rgba(255,255,255,.04)}
 #player-vis{position:absolute;inset:0;z-index:0;overflow:hidden;opacity:.35}
 #player-vis canvas{width:100%;height:100%;display:block}
 .player-inner{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;padding:0 20px;gap:16px}
@@ -164,8 +164,8 @@ body{font-family:var(--ff-body)}
 .vol-btn svg{width:13px;height:13px;fill:rgba(255,255,255,.7)}
 
 /* ── PANELS ── */
-.panel{position:absolute;background:rgba(255,255,255,.035);backdrop-filter:blur(40px) saturate(160%);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:20px 16px;box-shadow:0 8px 48px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04) inset,0 1px 0 rgba(255,255,255,.08) inset;display:flex;flex-direction:column;gap:0;z-index:2;pointer-events:none;width:162px}
-.panel-sm{position:absolute;background:rgba(255,255,255,.035);backdrop-filter:blur(40px) saturate(160%);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:16px;box-shadow:0 8px 48px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04) inset,0 1px 0 rgba(255,255,255,.08) inset;display:flex;flex-direction:column;gap:0;z-index:2;pointer-events:none;width:162px}
+.panel{position:absolute;background:rgba(255,255,255,.035);backdrop-filter:blur(15px) saturate(160%);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:20px 16px;box-shadow:0 8px 48px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04) inset,0 1px 0 rgba(255,255,255,.08) inset;display:flex;flex-direction:column;gap:0;z-index:2;pointer-events:none;width:162px;contain:paint}
+.panel-sm{position:absolute;background:rgba(255,255,255,.035);backdrop-filter:blur(12px) saturate(160%);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:16px;box-shadow:0 8px 48px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04) inset,0 1px 0 rgba(255,255,255,.08) inset;display:flex;flex-direction:column;gap:0;z-index:2;pointer-events:none;width:162px;contain:paint}
 .side-block{display:flex;flex-direction:column;gap:4px;padding:14px 0}
 .side-block:first-child{padding-top:0}
 .side-block:last-child{padding-bottom:0}
@@ -311,7 +311,7 @@ body{font-family:var(--ff-body)}
   </div>
 
   <!-- ══ LEFT SIDE PANELS ══ -->
-  <div id="takbir-card" class="panel-sm" style="top: 286.5px;">
+  <div id="takbir-card" class="panel-sm" style="top: 122px;">
     <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
       <div class="flag-box" style="flex-direction: row; display: flex;">
         <div style="width: 33.33%; background: #fff"></div>
@@ -324,7 +324,7 @@ body{font-family:var(--ff-body)}
     </div>
     <div id="takbir-latin">French voice player</div>
   </div>
-  <div id="left-panel" class="panel" style="top: 378.5px;">
+  <div id="left-panel" class="panel" style="top: 288px;">
     <div class="side-block">
       <div class="tags-wrap">
         <span class="tag">Lua / Luau</span>
@@ -335,7 +335,7 @@ body{font-family:var(--ff-body)}
       </div>
     </div>
   </div>
-  <div id="lang-panel" class="panel-sm" style="top: 506.391px;">
+  <div id="lang-panel" class="panel-sm" style="top: 415.891px;">
     <div class="side-label">Languages</div>
     <div class="lang-row" style="margin-top:10px">
       <div class="lang-item">
@@ -412,7 +412,7 @@ body{font-family:var(--ff-body)}
   </div>
 </div>
 
-<audio id="aud" src="https://files.catbox.moe/hj4sqj.mp3" preload="auto" autoplay crossorigin="anonymous"></audio>
+<audio id="aud" src="https://files.catbox.moe/hj4sqj.mp3" preload="auto" crossorigin="anonymous"></audio>
 <script>
 /* ═══════════════════════════════════════════════
    ABSENT.WTF — Complete JS
@@ -432,14 +432,14 @@ body{font-family:var(--ff-body)}
     { x: 0.5, y: 0.5, r: 0.6, h: 240, s: 0.3, speed: 0.0005, ampX: 0.1, ampY: 0.1 }
   ];
 
-  // More particles with varied sizes and movement
-  const particles = Array.from({ length: 40 }, () => ({
+  // Further reduced particles for performance
+  const particles = Array.from({ length: 20 }, () => ({
     x: Math.random(),
     y: Math.random(),
-    s: 0.5 + Math.random() * 1.2,
-    o: 0.1 + Math.random() * 0.4,
-    vx: (Math.random() - 0.5) * 0.0008,
-    vy: (Math.random() - 0.5) * 0.0008,
+    s: 0.5 + Math.random() * 1.0,
+    o: 0.1 + Math.random() * 0.3,
+    vx: (Math.random() - 0.5) * 0.0006,
+    vy: (Math.random() - 0.5) * 0.0006,
     pulse: Math.random() * Math.PI
   }));
 
@@ -454,7 +454,14 @@ body{font-family:var(--ff-body)}
     mouse.y = e.clientY;
   });
 
-  function draw() {
+  let lastDrawTime = 0;
+  function draw(currentTime) {
+    requestAnimationFrame(draw);
+    
+    // Limit background animation to ~40 FPS for better performance
+    if (currentTime - lastDrawTime < 25) return; 
+    lastDrawTime = currentTime;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // 1. Draw Enhanced Aura Blobs (Screen blending)
@@ -470,11 +477,15 @@ body{font-family:var(--ff-body)}
       g.addColorStop(1, 'transparent');
       
       ctx.fillStyle = g;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Use a circular path for the gradient to avoid filling the whole screen multiple times
+      ctx.beginPath();
+      ctx.arc(bx, by, br, 0, Math.PI * 2);
+      ctx.fill();
     });
 
     // 2. Draw Interactive Floating Particles
     ctx.globalCompositeOperation = 'source-over';
+    ctx.shadowBlur = 0; // Ensure shadow is disabled for batch drawing
     particles.forEach(p => {
       // Natural movement
       p.x += p.vx;
@@ -504,20 +515,11 @@ body{font-family:var(--ff-body)}
       ctx.beginPath();
       ctx.arc(px, py, p.s, 0, Math.PI * 2);
       ctx.fill();
-
-      // Occasional small glow around particles
-      if (p.s > 1.2) {
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      }
     });
 
     t++;
-    requestAnimationFrame(draw);
   }
-  draw();
+  requestAnimationFrame(draw);
 })();
 
 // ── WEB AUDIO API SETUP ────────────────────────
@@ -946,31 +948,42 @@ window.addEventListener('load', () => {
 // ── CURSOR TRAIL ───────────────────────────────
 (function initCursorTrail() {
   const COLORS = ['rgba(180,160,255,.7)', 'rgba(100,80,220,.7)', 'rgba(220,210,255,.7)', 'rgba(255,255,255,.5)'];
-  const MAX = 18;
+  const MAX = 12;
   const dots = [];
-  let mouse = { x: -999, y: -999 };
+  let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
   for (let i = 0; i < MAX; i++) {
     const d = document.createElement('div');
     d.className = 'cur-dot';
-    const size = (1 - i / MAX) * 7 + 1;
-    d.style.cssText = `width:${size}px;height:${size}px;opacity:0;background:${COLORS[i % COLORS.length]};box-shadow:0 0 ${size*2}px ${COLORS[i % COLORS.length]}`;
+    const size = (1 - i / MAX) * 6 + 1;
+    // Optimization: Add will-change and force GPU layers
+    d.style.cssText = `width:${size}px;height:${size}px;opacity:0;background:${COLORS[i % COLORS.length]};box-shadow:0 0 ${size*2}px ${COLORS[i % COLORS.length]};backface-visibility:hidden;will-change:transform,opacity`;
     document.body.appendChild(d);
-    dots.push({ el: d, x: -999, y: -999 });
+    dots.push({ el: d, x: mouse.x, y: mouse.y });
   }
 
-  document.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  document.addEventListener('mousemove', e => { 
+    mouse.x = e.clientX; 
+    mouse.y = e.clientY; 
+  }, { passive: true });
 
   (function animate() {
     let lx = mouse.x, ly = mouse.y;
+    
     dots.forEach((dot, i) => {
-      dot.x += (lx - dot.x) * (0.25 - i * 0.01);
-      dot.y += (ly - dot.y) * (0.25 - i * 0.01);
-      lx = dot.x; ly = dot.y;
+      // Use higher interpolation factor for ultra-smoothness
+      dot.x += (lx - dot.x) * 0.35;
+      dot.y += (ly - dot.y) * 0.35;
+      
+      lx = dot.x; 
+      ly = dot.y;
+      
       const age = i / MAX;
-      dot.el.style.transform = `translate(${dot.x}px,${dot.y}px) translate(-50%,-50%)`;
+      // Using translate3d is critical for GPU acceleration
+      dot.el.style.transform = `translate3d(${dot.x}px,${dot.y}px,0) translate(-50%,-50%)`;
       dot.el.style.opacity = (1 - age) * 0.8;
     });
+    
     requestAnimationFrame(animate);
   })();
 })();
@@ -987,16 +1000,17 @@ window.addEventListener('load', () => {
       width:80px;height:1.5px;
       background:linear-gradient(90deg,rgba(255,255,255,.8),transparent);
       transform-origin:0 0;
-      transform:rotate(-35deg);
+      transform:rotate(-35deg) translate3d(0,0,0);
       pointer-events:none;z-index:1;
       animation:shoot .7s ease-out forwards;
+      will-change:transform,opacity;
     `;
     document.body.appendChild(el);
     el.addEventListener('animationend', () => el.remove());
   }
 
   const style = document.createElement('style');
-  style.textContent = `@keyframes shoot{0%{opacity:1;transform:rotate(-35deg) translateX(0)}100%{opacity:0;transform:rotate(-35deg) translateX(-300px)}}`;
+  style.textContent = `@keyframes shoot{0%{opacity:1;transform:rotate(-35deg) translate3d(0,0,0)}100%{opacity:0;transform:rotate(-35deg) translate3d(-300px,0,0)}}`;
   document.head.appendChild(style);
 
   function scheduleNext() {
