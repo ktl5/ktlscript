@@ -1,0 +1,176 @@
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local activeTags = {}
+local scriptUsers = {}
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "HubNametags"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local marker = Instance.new("BoolValue")
+marker.Name = "HubScriptUser"
+marker.Value = true
+marker.Parent = playerGui
+
+local function teleportToPlayer(player)
+    local targetCharacter = player.Character
+    if targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart") then
+        local myCharacter = LocalPlayer.Character
+        if myCharacter and myCharacter:FindFirstChild("HumanoidRootPart") then
+            myCharacter.HumanoidRootPart.CFrame = targetCharacter.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+        end
+    end
+end
+
+local function checkIfScriptUser(player)
+    if player == LocalPlayer then return true end
+    local success, hasMarker = pcall(function()
+        local otherPlayerGui = player:FindFirstChild("PlayerGui")
+        return otherPlayerGui and otherPlayerGui:FindFirstChild("HubScriptUser")
+    end)
+    return success and hasMarker
+end
+
+local function createNametag(player)
+    if player == LocalPlayer then return end
+    if activeTags[player] then return end
+    if not scriptUsers[player.UserId] then return end
+
+    local character = player.Character
+    if not character then return end
+
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return end
+
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Name = "ScriptUserTag_" .. tostring(player.UserId)
+    billboardGui.Adornee = humanoidRootPart
+    billboardGui.Size = UDim2.new(0, 70, 0, 70)
+    billboardGui.StudsOffset = Vector3.new(0, 6, 0)
+    billboardGui.AlwaysOnTop = true
+    billboardGui.MaxDistance = 800
+    billboardGui.Parent = screenGui
+
+    local frame = Instance.new("Frame")
+    frame.Name = "Container"
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundTransparency = 1
+    frame.Parent = billboardGui
+
+    local imageLabel = Instance.new("ImageLabel")
+    imageLabel.Name = "Icon"
+    imageLabel.Parent = frame
+    imageLabel.BackgroundTransparency = 1
+    imageLabel.Size = UDim2.new(0.85, 0, 0.85, 0)
+    imageLabel.Position = UDim2.new(0.075, 0, 0.075, 0)
+    imageLabel.Image = "rbxassetid://12828226898"
+    imageLabel.ScaleType = Enum.ScaleType.Fit
+
+    activeTags[player] = billboardGui
+end
+
+local function removeNametag(player)
+    if activeTags[player] then
+        activeTags[player]:Destroy()
+        activeTags[player] = nil
+    end
+end
+
+local function onCharacterAdded(player, character)
+    task.wait(0.3)
+    if scriptUsers[player.UserId] then
+        createNametag(player)
+    end
+end
+
+local function onCharacterRemoving(player)
+    removeNametag(player)
+end
+
+local function onPlayerAdded(player)
+    player.CharacterAdded:Connect(function(character)
+        onCharacterAdded(player, character)
+    end)
+
+    player.CharacterRemoving:Connect(function()
+        onCharacterRemoving(player)
+    end)
+
+    if player.Character then
+        onCharacterAdded(player, player.Character)
+    end
+end
+
+local function onPlayerRemoving(player)
+    removeNametag(player)
+    scriptUsers[player.UserId] = nil
+end
+
+local function getPlayerFromMouse()
+    local closestPlayer = nil
+    local closestDistance = math.huge
+    local mouseLocation = UserInputService:GetMouseLocation()
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and scriptUsers[player.UserId] and player.Character then
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local screenPoint, onScreen = Camera:WorldToScreenPoint(hrp.Position + Vector3.new(0, 3, 0))
+                if onScreen then
+                    local distance = (Vector2.new(mouseLocation.X, mouseLocation.Y) - Vector2.new(screenPoint.X, screenPoint.Y)).Magnitude
+                    if distance < 100 and distance < closestDistance then
+                        closestDistance = distance
+                        closestPlayer = player
+                    end
+                end
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local targetPlayer = getPlayerFromMouse()
+        if targetPlayer then
+            teleportToPlayer(targetPlayer)
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local isUser = checkIfScriptUser(player)
+                if isUser and not scriptUsers[player.UserId] then
+                    scriptUsers[player.UserId] = true
+                    if player.Character then
+                        createNametag(player)
+                    end
+                elseif not isUser and scriptUsers[player.UserId] then
+                    scriptUsers[player.UserId] = nil
+                    removeNametag(player)
+                end
+            end
+        end
+        task.wait(2)
+    end
+end)
+
+for _, player in ipairs(Players:GetPlayers()) do
+    onPlayerAdded(player)
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+Players.PlayerRemoving:Connect(onPlayerRemoving)
+
+print("✅ Hub nametag system loaded! Only script users will see icons!")
