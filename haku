@@ -1,6 +1,6 @@
 local scriptsToLoad = {
-    "https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/ktlhub",
     "https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/test",
+    "https://raw.githubusercontent.com/ktl5/ktlscript/refs/heads/main/ktlhub",
 }
 
 for i, url in ipairs(scriptsToLoad) do
