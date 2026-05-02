@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <!-- saved from url=(0043)file:///C:/Users/the60/Downloads/index.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -159,9 +160,16 @@ body{font-family:var(--ff-body)}
 .progress-bar{height:3px;background:rgba(255,255,255,.08);border-radius:3px;cursor:pointer;position:relative;overflow:hidden}
 .progress-fill{position:absolute;height:100%;background:linear-gradient(90deg,rgba(180,160,255,.7),rgba(255,255,255,.9));border-radius:3px;width:0%;transition:width .1s linear;box-shadow:0 0 8px rgba(180,160,255,.4)}
 .progress-times{display:flex;justify-content:space-between;font-family:var(--ff-body);font-size:9px;font-weight:400;color:rgba(255,255,255,.3);letter-spacing:.05em}
-.vol-btn{width:30px;height:30px;background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;flex-shrink:0}
+.vol-btn{width:38px;height:38px;background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;flex-shrink:0}
 .vol-btn:hover{background:rgba(255,255,255,.1)}
-.vol-btn svg{width:13px;height:13px;fill:rgba(255,255,255,.7)}
+.vol-btn svg{width:18px;height:18px;fill:rgba(255,255,255,.7)}
+.vol-slider-wrap{display:flex;align-items:center;width:120px;height:30px}
+#vol-slider{width:100%;height:3px;appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.08);border-radius:3px;outline:none;cursor:pointer;transition:background .2s}
+#vol-slider:hover{background:rgba(255,255,255,.12)}
+#vol-slider::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:linear-gradient(135deg,rgba(180,160,255,.9),rgba(255,255,255,.95));box-shadow:0 0 10px rgba(180,160,255,.4);border:2px solid rgba(255,255,255,.2);transition:transform .2s,box-shadow .2s}
+#vol-slider::-webkit-slider-thumb:hover{transform:scale(1.2);box-shadow:0 0 16px rgba(180,160,255,.6)}
+#vol-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:linear-gradient(135deg,rgba(180,160,255,.9),rgba(255,255,255,.95));box-shadow:0 0 10px rgba(180,160,255,.4);border:2px solid rgba(255,255,255,.2);transition:transform .2s,box-shadow .2s}
+#vol-slider::-moz-range-thumb:hover{transform:scale(1.2);box-shadow:0 0 16px rgba(180,160,255,.6)}
 
 /* ── PANELS ── */
 .panel{position:absolute;background:rgba(255,255,255,.035);backdrop-filter:blur(15px) saturate(160%);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:20px 16px;box-shadow:0 8px 48px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04) inset,0 1px 0 rgba(255,255,255,.08) inset;display:flex;flex-direction:column;gap:0;z-index:2;pointer-events:none;width:162px;contain:paint}
@@ -218,6 +226,23 @@ body{font-family:var(--ff-body)}
 /* ── CURSOR TRAIL ── */
 .cur-dot{position:fixed;pointer-events:none;z-index:99999;border-radius:50%;transform:translate(-50%,-50%);will-change:transform,opacity}
 
+/* ── TOP LEFT VOLUME CONTROL ── */
+#volume-control{
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,.035);
+  backdrop-filter: blur(15px) saturate(160%);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  box-shadow: 0 8px 48px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04) inset,0 1px 0 rgba(255,255,255,.08) inset;
+}
+
 /* ── ENTER ANIMATION ── */
 #content > *{animation:fadeUp .6s ease both}
 .profile-card{animation-delay:.05s}
@@ -230,6 +255,19 @@ body{font-family:var(--ff-body)}
 <body class="loading">
 <div id="landing-overlay">
   <div class="enter-text">Click to enter</div>
+</div>
+
+<!-- Volume Control (Top Left) -->
+<div id="volume-control">
+  <div class="vol-btn" id="vlb">
+    <svg id="vol-icon-0" viewBox="0 0 24 24" style="display: none;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"></path></svg>
+    <svg id="vol-icon-1" viewBox="0 0 24 24" style="display: none;"><path d="M7 9v6h4l5 5V4l-5 5H7z"></path></svg>
+    <svg id="vol-icon-2" viewBox="0 0 24 24" style="display: block;"><path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"></path></svg>
+    <svg id="vol-icon-3" viewBox="0 0 24 24" style="display: none;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg>
+  </div>
+  <div class="vol-slider-wrap">
+    <input type="range" id="vol-slider" min="0" max="100" value="50">
+  </div>
 </div>
 
 <!-- ══ MAIN ══ -->
@@ -411,11 +449,10 @@ body{font-family:var(--ff-body)}
       <div class="progress-bar" id="prb"><div class="progress-fill" id="prf" style="width: 100%;"></div></div>
       <div class="progress-times"><span id="pt-cur">2:56</span><span id="pt-dur">2:56</span></div>
     </div>
-    <div class="vol-btn" id="vlb" style="opacity: 1;"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg></div>
   </div>
 </div>
 
-<audio id="aud" src="https://files.catbox.moe/hj4sqj.mp3" preload="auto" crossorigin="anonymous"></audio>
+<audio id="aud" preload="auto" crossorigin="anonymous"></audio>
 <script>
 /* ═══════════════════════════════════════════════
    ABSENT.WTF — Complete JS
@@ -764,7 +801,7 @@ window.addEventListener('load', () => {
   window.addEventListener('resize', centerContent);
 });
 
-// ── REAL AUDIO PLAYER ─────────────────────────
+// ── REAL AUDIO PLAYER (OPTIMIZED LOADING) ───────
 (function initPlayer() {
   const audio = document.getElementById('aud');
   const prf   = document.getElementById('prf');
@@ -780,23 +817,44 @@ window.addEventListener('load', () => {
 
   const playlist = [
     {
-      src: "https://files.catbox.moe/hj4sqj.mp3",
-      title: "Le Plan 2",
-      artist: "JRK 19",
-      cover: "https://cdn.discordapp.com/attachments/1475117893355307109/1497730580664815636/image.png?ex=69ee95cc&is=69ed444c&hm=06c626fe742780f825cd398a99813e17accea6b970dfe2547cab5e2b2cdbaf80"
+      src: "https://files.catbox.moe/kw6ps6.mp3",
+      title: "CAUCHEMARE",
+      artist: "zny",
+      cover: "https://i.imgur.com/2GGAL4F.jpeg"
     },
     {
       src: "https://files.catbox.moe/a1vpyv.mp3",
       title: "Never Lose Me",
       artist: "1PLIKE140",
-      cover: "https://cdn.discordapp.com/attachments/1475117893355307109/1497899334409261116/image.png?ex=69ef32f6&is=69ede176&hm=c793b94d4a818566e978b79a5b53a2eaf1f42880f430a0233b7548e6fe014c20"
+      cover: "https://i.imgur.com/B9BvA3L.png"
+    },
+    {
+      src: "https://files.catbox.moe/g40emu.mp3",
+      title: "Kerchak x Pink Lemonade",
+      artist: "Kerchak",
+      cover: "https://i.imgur.com/dijpYCz.png"
+    },
+    {
+      src: "https://files.catbox.moe/q8feoi.mp3",
+      title: "WAGNER GROUP",
+      artist: "FREEZE CORLEONE",
+      cover: "https://i.imgur.com/jyHIZRA.jpeg"
     }
   ];
 
   let currentTrack = 0;
+  
+  // Preload all covers immediately (lightweight, doesn't affect load time)
+  const preloadedCovers = [];
+  playlist.forEach(track => {
+    const img = new Image();
+    img.src = track.cover;
+    preloadedCovers.push(img);
+  });
 
   function loadTrack(index, shouldPlay = false) {
      const track = playlist[index];
+     console.log("Loading track:", index, track);
      
      // Update UI first (instant feedback)
      trackName.textContent = track.title;
@@ -804,42 +862,49 @@ window.addEventListener('load', () => {
      spArtist.textContent = track.artist;
      spArt.style.backgroundImage = `url('${track.cover}')`;
      
-     // Change source only if different
-     if (audio.getAttribute('src') !== track.src) {
+     // Set audio source
+     console.log("Current audio src:", audio.src);
+     console.log("New track src:", track.src);
+     if (audio.src !== track.src) {
        audio.src = track.src;
+       audio.preload = 'auto';
+       console.log("Updated audio src to:", audio.src);
      }
 
      if (shouldPlay) {
        const playPromise = audio.play();
        if (playPromise !== undefined) {
-         playPromise.then(() => setPlaying(true)).catch(err => {
+         playPromise.then(() => {
+           setPlaying(true);
+           // Preload next track after current starts playing
+           preloadNext();
+         }).catch(err => {
            console.error('Playback failed:', err);
            setPlaying(false);
          });
        }
+     } else {
+       // Just preload if not playing
+       preloadNext();
      }
    }
 
    function nextTrack() {
      currentTrack = (currentTrack + 1) % playlist.length;
      loadTrack(currentTrack, true);
-     preloadNext();
    }
 
    function prevTrack() {
      currentTrack = (currentTrack - 1 + playlist.length) % playlist.length;
      loadTrack(currentTrack, true);
-     preloadNext();
    }
-
-   // Preload the next track in the background
+   
    function preloadNext() {
      const nextIdx = (currentTrack + 1) % playlist.length;
      const link = document.createElement('link');
      link.rel = 'preload';
      link.as = 'audio';
      link.href = playlist[nextIdx].src;
-     // Remove old preloads to avoid memory leaks
      const oldLinks = document.querySelectorAll('link[rel="preload"][as="audio"]');
      oldLinks.forEach(l => l.remove());
      document.head.appendChild(link);
@@ -851,8 +916,16 @@ window.addEventListener('load', () => {
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   }
 
+  // Audio event listeners
+  audio.addEventListener('loadstart', () => console.log('Audio loadstart'));
+  audio.addEventListener('progress', () => console.log('Audio progress'));
+  audio.addEventListener('canplay', () => console.log('Audio canplay'));
+  audio.addEventListener('canplaythrough', () => console.log('Audio canplaythrough'));
+  audio.addEventListener('error', (e) => console.error('Audio error:', e, audio.error));
+  
   // Metadata loaded → show real duration
   audio.addEventListener('loadedmetadata', () => {
+    console.log('Audio loadedmetadata, duration:', audio.duration);
     ptDur.textContent = fmt(audio.duration);
     document.getElementById('sp-dur').textContent = fmt(audio.duration);
   });
@@ -906,11 +979,56 @@ window.addEventListener('load', () => {
   document.getElementById('prv').addEventListener('click', prevTrack);
   document.getElementById('nxt').addEventListener('click', nextTrack);
 
-  // Volume toggle (mute/unmute)
-  document.getElementById('vlb').addEventListener('click', () => {
-    audio.muted = !audio.muted;
-    document.getElementById('vlb').style.opacity = audio.muted ? '.35' : '1';
+  // Volume control
+  const volSlider = document.getElementById('vol-slider');
+  const volBtn = document.getElementById('vlb');
+  const volIcons = {
+    0: document.getElementById('vol-icon-0'),
+    1: document.getElementById('vol-icon-1'),
+    2: document.getElementById('vol-icon-2'),
+    3: document.getElementById('vol-icon-3')
+  };
+  let lastVolume = 0.5;
+  audio.volume = 0.5;
+
+  function updateVolumeIcon(volume, muted) {
+    for (let i = 0; i < 4; i++) {
+      volIcons[i].style.display = 'none';
+    }
+    if (muted || volume === 0) {
+      volIcons[0].style.display = 'block';
+    } else if (volume < 0.33) {
+      volIcons[1].style.display = 'block';
+    } else if (volume < 0.66) {
+      volIcons[2].style.display = 'block';
+    } else {
+      volIcons[3].style.display = 'block';
+    }
+    volBtn.style.opacity = muted ? '.35' : '1';
+  }
+
+  volSlider.addEventListener('input', (e) => {
+    const vol = e.target.value / 100;
+    audio.volume = vol;
+    audio.muted = false;
+    lastVolume = vol;
+    updateVolumeIcon(vol, false);
   });
+
+  volBtn.addEventListener('click', () => {
+    if (audio.muted || audio.volume === 0) {
+      audio.muted = false;
+      audio.volume = lastVolume || 0.5;
+      volSlider.value = audio.volume * 100;
+      updateVolumeIcon(audio.volume, false);
+    } else {
+      lastVolume = audio.volume;
+      audio.muted = true;
+      updateVolumeIcon(audio.volume, true);
+    }
+  });
+
+  updateVolumeIcon(audio.volume, audio.muted);
 
   // ── AUTOPLAY LOGIC ──
   const landing = document.getElementById('landing-overlay');
