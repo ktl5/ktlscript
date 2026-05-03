@@ -84,13 +84,13 @@ local function loadGlobalPresets()
     if isfile and isfile(presetFileName) then
         local content = readfile(presetFileName)
         local success, data = pcall(HttpService.JSONDecode, HttpService, content)
-        if success then 
+        if success then
             currentPresets = data
             -- Application des valeurs chargées aux éléments UI existants
             for name, state in pairs(currentPresets.Toggles) do
                 if uiElements.Toggles[name] then
-                    pcall(function() 
-                        uiElements.Toggles[name].set(state) 
+                    pcall(function()
+                        uiElements.Toggles[name].set(state)
                         if uiCallbacks.Toggles[name] then
                             uiCallbacks.Toggles[name](state)
                         end
@@ -99,9 +99,8 @@ local function loadGlobalPresets()
             end
             for name, value in pairs(currentPresets.Sliders) do
                 if uiElements.Sliders[name] then
-                    pcall(function() 
+                    pcall(function()
                         uiElements.Sliders[name].set(value)
-                        -- Forcer le callback enregistré manuellement
                         if uiCallbacks.Sliders[name] then
                             uiCallbacks.Sliders[name](value)
                         end
@@ -114,7 +113,7 @@ end
 
 -- Exécuter l'AutoLoad si activé
 task.spawn(function()
-    task.wait(2) -- Attendre que tout soit bien initialisé
+    task.wait(2)
     if autoLoadEnabled then
         loadGlobalPresets()
         if win then
@@ -123,7 +122,7 @@ task.spawn(function()
     end
 end)
 
--- Wrapper pour enregistrer les toggles et sliders sans casser lb
+-- Wrapper pour enregistrer les toggles et sliders
 local function registerToggle(name, obj, callback)
     uiElements.Toggles[name] = obj
     uiCallbacks.Toggles[name] = callback
@@ -237,7 +236,7 @@ lb.addPlayerList = function(self, labelOrCallback, callback)
     refreshBtn.BorderSizePixel = 0
     refreshBtn.LayoutOrder = 2
     refreshBtn.Parent = header
-    
+
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = refreshBtn
@@ -287,7 +286,7 @@ lb.addPlayerList = function(self, labelOrCallback, callback)
             card.BorderSizePixel = 0
             card.LayoutOrder = idx
             card.Parent = listFrame
-            
+
             local cCorner = Instance.new("UICorner")
             cCorner.CornerRadius = UDim.new(0, 10)
             cCorner.Parent = card
@@ -340,18 +339,16 @@ lb.addPlayerList = function(self, labelOrCallback, callback)
                         selectedPlayer = nil
                         actionCallback(player, false)
                     else
-                        -- Désélectionner l'ancien joueur s'il existe
                         local oldSelected = selectedPlayer
                         selectedPlayer = player
-                        
-                        -- On rafraîchit les couleurs des cartes sans reconstruire toute la liste
+
                         for _, otherCard in pairs(listFrame:GetChildren()) do
                             if otherCard:IsA("Frame") then
                                 otherCard.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
                             end
                         end
                         card.BackgroundColor3 = Color3.fromRGB(20, 80, 30)
-                        
+
                         if oldSelected then
                             actionCallback(oldSelected, false)
                         end
@@ -360,9 +357,6 @@ lb.addPlayerList = function(self, labelOrCallback, callback)
                 else
                     actionCallback(player)
                 end
-                
-                -- Si on est en mode toggle, on ne reconstruit pas la liste pour éviter le lag
-                -- mais on met à jour les couleurs manuellement comme fait au-dessus
             end)
         end
         self:resize()
@@ -402,7 +396,6 @@ end
 
 -- Sauvegarder la taille lors du changement
 win.mainFrame:GetPropertyChangedSignal("Size"):Connect(function()
-    -- On ne sauvegarde QUE si l'utilisateur a redimensionné ET que l'interface n'est pas minimisée
     if win._userResized and not win._minimized then
         config.SizeX = win.mainFrame.Size.X.Offset
         config.SizeY = win.mainFrame.Size.Y.Offset
@@ -422,9 +415,8 @@ local walkSpeed = 16
 local clickTPEnabled = false
 local isInvisible = false
 local originalTransparencies = {}
-local originalCanCollide = {}
-local originalCanTouch = {}
 local invisibilityConfig = {
+    TeleportHeight = -5000,
     Transparency = 0.7
 }
 local currentFOV = 70
@@ -451,7 +443,6 @@ RunService.RenderStepped:Connect(function()
         workspace.CurrentCamera.FieldOfView = currentFOV
     end
 end)
-
 
 local character, humanoid, rootPart
 local pos, gyro, heartbeatEvent, noclipConnection
@@ -486,79 +477,85 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
 end)
 
 -------------------------------------------------------------------------
--- LOGIQUE INVISIBILITÉ (SHIFTFLOCK FRIENDLY)
+-- LOGIQUE INVISIBILITÉ (NUCLEARBOBO 5.0.4 LOGIC)
 -------------------------------------------------------------------------
-local function applyTransparency()
+local function applyTransparencyLoop()
     if not isInvisible or not character then return end
-    
+
     for _, obj in pairs(character:GetDescendants()) do
-        if obj:IsA("BasePart") then
+        if obj:IsA("BasePart") and obj.Name ~= "HumanoidRootPart" then
             if originalTransparencies[obj] == nil then
                 originalTransparencies[obj] = obj.Transparency
             end
-            if originalCanCollide[obj] == nil then
-                originalCanCollide[obj] = obj.CanCollide
+            if obj.Transparency ~= invisibilityConfig.Transparency then
+                obj.Transparency = invisibilityConfig.Transparency
             end
-            if originalCanTouch[obj] == nil then
-                originalCanTouch[obj] = obj.CanTouch
-            end
-            
-            obj.Transparency = invisibilityConfig.Transparency
-            obj.CanCollide = false
-            obj.CanTouch = false
         elseif obj:IsA("Decal") then
-            obj.Transparency = invisibilityConfig.Transparency
+            if obj.Transparency ~= invisibilityConfig.Transparency then
+                obj.Transparency = invisibilityConfig.Transparency
+            end
         end
     end
-end
-
-local function restoreVisibility()
-    if not character then return end
-    
-    for obj, trans in pairs(originalTransparencies) do
-        if obj and obj.Parent then
-            obj.Transparency = trans
-        end
-    end
-    for obj, collide in pairs(originalCanCollide) do
-        if obj and obj.Parent then
-            obj.CanCollide = collide
-        end
-    end
-    for obj, touch in pairs(originalCanTouch) do
-        if obj and obj.Parent then
-            obj.CanTouch = touch
-        end
-    end
-    
-    for _, obj in pairs(character:GetDescendants()) do
-        if obj:IsA("Decal") then 
-            obj.Transparency = 0 
-        end
-    end
-    
-    originalTransparencies = {}
-    originalCanCollide = {}
-    originalCanTouch = {}
 end
 
 function toggleInvisibility(state)
     if not character or not character.Parent then setupCharacter() end
     isInvisible = state
-    
+
     if not isInvisible then
-        restoreVisibility()
+        -- Restauration des transparences
+        for obj, trans in pairs(originalTransparencies) do
+            if obj and obj.Parent then
+                obj.Transparency = trans
+            end
+        end
+        for _, obj in pairs(character:GetDescendants()) do
+            if obj:IsA("Decal") then obj.Transparency = 0 end
+        end
         win:notify("Invisibility", "Disabled")
     else
-        applyTransparency()
         win:notify("Invisibility", "Enable")
     end
 end
 
--- Boucle simple pour maintenir la transparence
+-- Boucle de téléportation pour l'invisibilité
 RunService.Heartbeat:Connect(function()
-    if isInvisible and character and character.Parent then
-        applyTransparency()
+    if isInvisible and character and rootPart and humanoid and rootPart.Parent then
+        applyTransparencyLoop()
+
+        local oldCF = rootPart.CFrame
+        local oldOffset = humanoid.CameraOffset
+        local hiddenCF = oldCF * CFrame.new(0, invisibilityConfig.TeleportHeight, 0)
+
+        -- Désactivation temporaire des forces du Fly pour éviter l'explosion physique
+        local oldMaxForce = nil
+        if flying and pos then
+            oldMaxForce = pos.MaxForce
+            pos.MaxForce = Vector3.new(0, 0, 0)
+        end
+
+        rootPart.CFrame = hiddenCF
+        humanoid.CameraOffset = Vector3.new(0, -invisibilityConfig.TeleportHeight, 0)
+
+        RunService.RenderStepped:Wait()
+
+        if rootPart and rootPart.Parent then
+            local currentPos = rootPart.Position
+            local expectedPos = hiddenCF.Position
+
+            -- Anti-Rollback TP: Si on a bougé de plus de 50 studs (ex: TP), on accepte la nouvelle position
+            if (currentPos - expectedPos).Magnitude > 50 then
+                oldCF = rootPart.CFrame
+            end
+
+            rootPart.CFrame = oldCF
+            humanoid.CameraOffset = oldOffset
+
+            -- Restauration des forces du Fly
+            if flying and pos and oldMaxForce then
+                pos.MaxForce = oldMaxForce
+            end
+        end
     end
 end)
 
@@ -589,7 +586,7 @@ local function updateNoclipLoop()
                 hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
                 hum:ChangeState(Enum.HumanoidStateType.GettingUp)
             end
-            
+
             for _, v in pairs(character:GetDescendants()) do
                 if v:IsA("BasePart") then
                     v.CanCollide = true
@@ -613,11 +610,16 @@ end
 function startFlying()
     if flying or not rootPart then return end
     flying = true
-    
+
     pos = Instance.new("BodyPosition")
     gyro = Instance.new("BodyGyro")
 
+    -- Fix: Si on est invisible, on ne prend pas la position actuelle (qui peut être à -5000)
     local targetInitialPos = rootPart.Position
+    if isInvisible then
+        targetInitialPos = targetInitialPos + Vector3.new(0, -invisibilityConfig.TeleportHeight, 0)
+    end
+
     pos.Position = targetInitialPos + Vector3.new(0, 3, 0)
     pos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
     pos.P = 55000
@@ -753,7 +755,7 @@ local function applyVisuals(p)
 end
 
 local function updateAllVisuals()
-    for _, p in pairs(game:GetService("Players"):GetPlayers()) do
+    for _, p in pairs(Players:GetPlayers()) do
         applyVisuals(p)
     end
 end
@@ -766,19 +768,19 @@ local function getMap()
 end
 
 local MM2_DEFAULT_COLOR = Color3.fromRGB(50, 205, 50)
-local MM2_KNIFE_COLOR   = Color3.fromRGB(220, 40, 40)
-local MM2_GUN_COLOR     = Color3.fromRGB(40, 120, 255)
+local MM2_KNIFE_COLOR = Color3.fromRGB(220, 40, 40)
+local MM2_GUN_COLOR = Color3.fromRGB(40, 120, 255)
 
 local function detectWeaponColor(player)
     local character = player.Character
     if not character then return MM2_DEFAULT_COLOR end
-    
+
     local best, bestPrio = nil, 0
     local weaponKeywords = {
-        { pattern = "gun",   priority = 2, color = MM2_GUN_COLOR   },
+        { pattern = "gun", priority = 2, color = MM2_GUN_COLOR },
         { pattern = "knife", priority = 1, color = MM2_KNIFE_COLOR },
     }
-    
+
     local function checkTool(tool)
         if not tool:IsA("Tool") then return end
         local lower = tool.Name:lower()
@@ -789,11 +791,11 @@ local function detectWeaponColor(player)
             end
         end
     end
-    
+
     for _, obj in ipairs(character:GetChildren()) do checkTool(obj) end
     local bp = player:FindFirstChildOfClass("Backpack")
     if bp then for _, obj in ipairs(bp:GetChildren()) do checkTool(obj) end end
-    
+
     return best or MM2_DEFAULT_COLOR
 end
 
@@ -866,7 +868,6 @@ local function updateDroppedGunESP()
     if mm2Config.DroppedGunESP and map then
         local gun = map:FindFirstChild("GunDrop")
         if gun then
-            -- Highlight Logic
             local highlight = gun:FindFirstChild("KTL_GunHighlight")
             if not highlight then
                 highlight = Instance.new("Highlight")
@@ -876,8 +877,7 @@ local function updateDroppedGunESP()
                 highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
                 highlight.Parent = gun
             end
-            
-            -- ESP Logic (Name)
+
             local espGui = gun:FindFirstChild("KTL_GunESP")
             if not espGui then
                 espGui = Instance.new("BillboardGui")
@@ -898,7 +898,6 @@ local function updateDroppedGunESP()
                 label.Parent = espGui
             end
         else
-            -- Clear old ESP if gun is gone
             if map then
                 for _, child in pairs(map:GetChildren()) do
                     if child.Name == "GunDrop" then
@@ -913,7 +912,7 @@ local function updateDroppedGunESP()
     end
 end
 
-game:GetService("Players").PlayerAdded:Connect(function(p)
+Players.PlayerAdded:Connect(function(p)
     p.CharacterAdded:Connect(function()
         task.wait(1)
         applyVisuals(p)
@@ -944,67 +943,73 @@ win:switchTab(optionsTab)
 -- Skin preset Tab
 win:switchTab(skinPresetTab)
 win:addButton("E-boy R6", function()
-    local args = { 
-        buffer.fromstring("\005\000"), 
-        { 
-            4779442739404590 
-        } 
-    } 
+    local args =
+        {
+            buffer.fromstring("\005\000"),
+            {
+                4779442739404590
+            }
+        }
     game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
     win:notify("Skin preset", "E-boy R6 activé !")
 end)
 win:addButton("E-Girl", function()
-    local args = { 
-        buffer.fromstring("\005\000"), 
-        { 
-            6129514896723672 
-        } 
-    } 
+    local args =
+        {
+            buffer.fromstring("\005\000"),
+            {
+                6129514896723672
+            }
+        }
     game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
     win:notify("Skin preset", "E-Girl activé !")
 end)
 win:addButton("Riche", function()
-    local args = { 
-        buffer.fromstring("\005\000"), 
-        { 
-            4715780617305003 
-        } 
-    } 
+    local args =
+        {
+            buffer.fromstring("\005\000"),
+            {
+                4715780617305003
+            }
+        }
     game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
     win:notify("Skin preset", "Riche activé !")
 end)
 win:addButton("Riche Girl", function()
-    local args = { 
-        buffer.fromstring("\005\000"), 
-        { 
-            2387695079661020 
-        } 
-    } 
+    local args =
+        {
+            buffer.fromstring("\005\000"),
+            {
+                2387695079661020
+            }
+        }
     game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
     win:notify("Skin preset", "Riche Girl activé !")
 end)
 win:addButton("Baller Korblox", function()
-    local args = { 
-        buffer.fromstring("\005\000"), 
-        { 
-            6275739128577701 
-        } 
-    } 
+    local args =
+        {
+            buffer.fromstring("\005\000"),
+            {
+                6275739128577701
+            }
+        }
     game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
     win:notify("Skin preset", "Baller Korblox activé !")
 end)
 win:addButton("AgePlayer", function()
-    local args = { 
-        buffer.fromstring("\005\000"), 
-        { 
-            5407542600028116 
-        } 
-    } 
+    local args =
+        {
+            buffer.fromstring("\005\000"),
+            {
+                5407542600028116
+            }
+        }
     game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
     win:notify("Skin preset", "AgePlayer activé !")
 end)
 
--- Teleportation Tab: ONLY Base Admin
+-- Teleportation Tab
 win:switchTab(teleportTab)
 win:addButton("Base Admin", function()
     local character = LocalPlayer.Character
@@ -1070,7 +1075,7 @@ win:addButton("FootBall", function()
     end
 end)
 
--- Options Tab: Rejoin Buttons
+-- Options Tab
 win:switchTab(optionsTab)
 win:addButton("Rejoin server", function()
     local ts = game:GetService("TeleportService")
@@ -1081,19 +1086,17 @@ win:addButton("Rejoin Random Server", function()
     local placeId = game.PlaceId
     local servers = {}
     local cursor = ""
-    
+
     win:notify("Teleport", "Searching for a random server...")
 
     local success, err = pcall(function()
-        -- On essaie de récupérer plus de serveurs avec différentes pages
         for i = 1, 5 do
             local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Desc&limit=100" .. (cursor ~= "" and "&cursor=" .. cursor or "")
             local data = game:HttpGet(url)
-            local decoded = game:GetService("HttpService"):JSONDecode(data)
+            local decoded = HttpService:JSONDecode(data)
 
             if decoded and decoded.data then
                 for _, srv in ipairs(decoded.data) do
-                    -- On vérifie que c'est un serveur différent et qu'il y a de la place
                     if srv.id ~= game.JobId and srv.playing < srv.maxPlayers then
                         table.insert(servers, srv)
                     end
@@ -1113,11 +1116,11 @@ win:addButton("Rejoin Random Server", function()
     if #servers > 0 then
         local randomServer = servers[math.random(1, #servers)]
         win:notify("Teleport", "Joining server: " .. randomServer.id)
-        
+
         local tpSuccess, tpErr = pcall(function()
             ts:TeleportToPlaceInstance(placeId, randomServer.id, LocalPlayer)
         end)
-        
+
         if not tpSuccess then
             win:notify("Error", "Teleport failed, trying simple rejoin...")
             ts:Teleport(placeId, LocalPlayer)
@@ -1157,10 +1160,7 @@ local antiFlingToggleObj = win:addToggle("Anti Fling", false, function(state)
         end
     end
 end)
-registerToggle("Anti Fling", antiFlingToggleObj, function(state)
-    antiFlingEnabled = state
-    -- La connexion Stepped est gérée par le callback principal, donc on ne fait rien ici
-end)
+registerToggle("Anti Fling", antiFlingToggleObj, function(state) antiFlingEnabled = state end)
 
 -- FLING
 local flingEnabled = false
@@ -1172,11 +1172,10 @@ local flingDiedConn = nil
 local flingToggleObj_actual = win:addToggle("Fling", false, function(state)
     updatePresetToggle("Fling", state)
     flingEnabled = state
-    
+
     if state then
         if not character or not rootPart then return end
-        
-        -- Propriétés physiques massives pour le fling
+
         for _, child in pairs(character:GetDescendants()) do
             if child:IsA("BasePart") then
                 child.CustomPhysicalProperties = PhysicalProperties.new(100, 0.3, 0.5)
@@ -1186,11 +1185,9 @@ local flingToggleObj_actual = win:addToggle("Fling", false, function(state)
             end
         end
 
-        -- Activation du Noclip interne
         noclipMode = true
         updateNoclipLoop()
 
-        -- Maintien de la position verticale pour éviter de tomber/s'envoler
         flingBodyPos = Instance.new("BodyPosition")
         flingBodyPos.Name = "KTL_FlingPos"
         flingBodyPos.Parent = rootPart
@@ -1198,22 +1195,19 @@ local flingToggleObj_actual = win:addToggle("Fling", false, function(state)
         flingBodyPos.P = 10000
         flingBodyPos.Position = rootPart.Position
 
-        -- Maintien du personnage DROIT (crucial pour ne pas s'envoler comme un hélicoptère)
         flingBodyGyro = Instance.new("BodyGyro")
         flingBodyGyro.Name = "KTL_FlingGyro"
         flingBodyGyro.Parent = rootPart
-        flingBodyGyro.MaxTorque = Vector3.new(math.huge, 0, math.huge) -- Verrouille l'inclinaison X et Z
+        flingBodyGyro.MaxTorque = Vector3.new(math.huge, 0, math.huge)
         flingBodyGyro.P = 1000000
         flingBodyGyro.CFrame = rootPart.CFrame
 
-        -- Création de la rotation pulsée
         flingBodyAV = Instance.new("BodyAngularVelocity")
         flingBodyAV.Name = "KTL_Fling"
         flingBodyAV.Parent = rootPart
         flingBodyAV.MaxTorque = Vector3.new(0, math.huge, 0)
         flingBodyAV.P = math.huge
-        
-        -- Gestion de la mort
+
         local hum = character:FindFirstChildOfClass("Humanoid")
         if hum then
             flingDiedConn = hum.Died:Connect(function()
@@ -1223,19 +1217,16 @@ local flingToggleObj_actual = win:addToggle("Fling", false, function(state)
             end)
         end
 
-        -- Boucle de pulsation et de stabilisation
         task.spawn(function()
             while flingEnabled and rootPart and flingBodyAV do
-                -- Stabilisation constante
                 if flingBodyPos then
                     flingBodyPos.Position = Vector3.new(0, rootPart.Position.Y, 0)
                 end
-                
-                -- On reset la vélocité linéaire pour ne pas être expulsé par la rotation
+
                 rootPart.Velocity = Vector3.new(0, 0, 0)
                 for _, child in pairs(character:GetDescendants()) do
                     if child:IsA("BasePart") then
-                        child.CanCollide = false -- On force le noclip à chaque cycle
+                        child.CanCollide = false
                     end
                 end
 
@@ -1247,7 +1238,6 @@ local flingToggleObj_actual = win:addToggle("Fling", false, function(state)
             end
         end)
     else
-        -- Désactivation (Unfling)
         flingEnabled = false
 
         if flingDiedConn then
@@ -1255,7 +1245,6 @@ local flingToggleObj_actual = win:addToggle("Fling", false, function(state)
             flingDiedConn = nil
         end
 
-        -- 1. Nettoyage immédiat des forces
         if rootPart then
             for _, v in pairs(rootPart:GetChildren()) do
                 if v:IsA("BodyAngularVelocity") or v:IsA("BodyPosition") or v:IsA("BodyGyro") then
@@ -1264,13 +1253,11 @@ local flingToggleObj_actual = win:addToggle("Fling", false, function(state)
                     end
                 end
             end
-            
-            -- Reset physique brutal
+
             rootPart.Velocity = Vector3.new(0, 0, 0)
             rootPart.RotVelocity = Vector3.new(0, 0, 0)
         end
 
-        -- 2. Restauration Humanoïde & Physique
         if character then
             local hum = character:FindFirstChildOfClass("Humanoid")
             if hum then
@@ -1282,7 +1269,6 @@ local flingToggleObj_actual = win:addToggle("Fling", false, function(state)
 
             for _, child in pairs(character:GetDescendants()) do
                 if child:IsA("BasePart") then
-                    -- Reset total des propriétés physiques (important pour la démarche)
                     child.CustomPhysicalProperties = PhysicalProperties.new(0.7, 0.3, 0.5)
                     child.Massless = false
                     child.Velocity = Vector3.new(0, 0, 0)
@@ -1291,27 +1277,22 @@ local flingToggleObj_actual = win:addToggle("Fling", false, function(state)
             end
         end
 
-        -- 3. Désactivation Noclip
         noclipMode = false
         updateNoclipLoop()
 
-        -- 4. LA FIX : Téléportation corrective pour "reset" le personnage dans le monde physique
         if rootPart then
             task.wait(0.05)
-            -- On décale de 0.1 stud pour forcer le moteur physique à ré-ancrer le perso
             rootPart.CFrame = rootPart.CFrame * CFrame.new(0, 0.1, 0)
             rootPart.Velocity = Vector3.new(0, 0, 0)
             rootPart.RotVelocity = Vector3.new(0, 0, 0)
         end
-        
+
         flingBodyAV = nil
         flingBodyPos = nil
         flingBodyGyro = nil
     end
 end)
-registerToggle("Fling", flingToggleObj_actual, function(state)
-    flingEnabled = state
-end)
+registerToggle("Fling", flingToggleObj_actual, function(state) flingEnabled = state end)
 
 -- ANTI AFK
 local VirtualUser = game:GetService("VirtualUser")
@@ -1320,7 +1301,6 @@ local antiAfkConnection = nil
 
 win:addToggle("Anti AFK", false, function(state)
     antiAfkEnabled = state
-
     if state then
         antiAfkConnection = LocalPlayer.Idled:Connect(function()
             if antiAfkEnabled then
@@ -1341,18 +1321,14 @@ local maxZoomSlider = win:addSlider("Max Zoom", 400, 5000, 400, function(v)
     updatePresetSlider("Max Zoom", v)
     LocalPlayer.CameraMaxZoomDistance = v
 end)
-registerSlider("Max Zoom", maxZoomSlider, function(v)
-    LocalPlayer.CameraMaxZoomDistance = v
-end)
+registerSlider("Max Zoom", maxZoomSlider, function(v) LocalPlayer.CameraMaxZoomDistance = v end)
 
 -- SLIDER FOV
 local fovSlider = win:addSlider("Field of View (FOV)", 70, 120, 70, function(v)
     updatePresetSlider("Field of View (FOV)", v)
     currentFOV = v
 end)
-registerSlider("Field of View (FOV)", fovSlider, function(v)
-    currentFOV = v
-end)
+registerSlider("Field of View (FOV)", fovSlider, function(v) currentFOV = v end)
 
 -- Onglet Mouvement
 win:switchTab(mainTab)
@@ -1391,9 +1367,7 @@ local flySpeedSlider = win:addSlider("Fly Speed", 50, 300, 50, function(v)
     updatePresetSlider("Fly Speed", v)
     flySpeed = v
 end)
-registerSlider("Fly Speed", flySpeedSlider, function(v)
-    flySpeed = v
-end)
+registerSlider("Fly Speed", flySpeedSlider, function(v) flySpeed = v end)
 
 local walkSpeedSlider = win:addSlider("WalkSpeed", 16, 100, 16, function(v)
     updatePresetSlider("WalkSpeed", v)
@@ -1413,17 +1387,13 @@ local clickTPToggle = win:addToggle("Click TP (Ctrl + Click)", false, function(s
     updatePresetToggle("Click TP (Ctrl + Click)", state)
     clickTPEnabled = state
 end)
-registerToggle("Click TP (Ctrl + Click)", clickTPToggle, function(state)
-    clickTPEnabled = state
-end)
+registerToggle("Click TP (Ctrl + Click)", clickTPToggle, function(state) clickTPEnabled = state end)
 
 invisibleToggleObj = win:addToggle("Invisibility (FE)", false, function(state)
     updatePresetToggle("Invisibility (FE)", state)
     toggleInvisibility(state)
 end)
-registerToggle("Invisibility (FE)", invisibleToggleObj, function(state)
-    toggleInvisibility(state)
-end)
+registerToggle("Invisibility (FE)", invisibleToggleObj, function(state) toggleInvisibility(state) end)
 
 -- Onglet Visuals
 win:switchTab(visualsTab)
@@ -1465,9 +1435,9 @@ local function getPlayerByRole(roleName)
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
             local hasKnife = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
-            local hasGun = p.Character:FindFirstChild("Gun") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Gun")) or 
+            local hasGun = p.Character:FindFirstChild("Gun") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Gun")) or
                            p.Character:FindFirstChild("Revolver") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Revolver"))
-            
+
             if roleName == "Murderer" and hasKnife then
                 return p
             elseif roleName == "Sheriff" and hasGun then
@@ -1502,7 +1472,6 @@ local droppedGunToggle = win:addToggle("Dropped Gun ESP", false, function(state)
     updatePresetToggle("Dropped Gun ESP", state)
     mm2Config.DroppedGunESP = state
     if not state then
-        -- Clear ESP immediately when toggled off
         local map = getMap()
         if map then
             for _, child in pairs(map:GetChildren()) do
@@ -1516,9 +1485,7 @@ local droppedGunToggle = win:addToggle("Dropped Gun ESP", false, function(state)
         end
     end
 end)
-registerToggle("Dropped Gun ESP", droppedGunToggle, function(state)
-    mm2Config.DroppedGunESP = state
-end)
+registerToggle("Dropped Gun ESP", droppedGunToggle, function(state) mm2Config.DroppedGunESP = state end)
 
 local playerESPToggle = win:addToggle("Player ESP", false, function(state)
     updatePresetToggle("Player ESP", state)
@@ -1535,9 +1502,7 @@ local playerESPToggle = win:addToggle("Player ESP", false, function(state)
         end
     end
 end)
-registerToggle("Player ESP", playerESPToggle, function(state)
-    mm2Config.PlayerESP = state
-end)
+registerToggle("Player ESP", playerESPToggle, function(state) mm2Config.PlayerESP = state end)
 
 local playerOutlineToggle = win:addToggle("Player Outline", false, function(state)
     updatePresetToggle("Player Outline", state)
@@ -1551,21 +1516,18 @@ local playerOutlineToggle = win:addToggle("Player Outline", false, function(stat
         end
     end
 end)
-registerToggle("Player Outline", playerOutlineToggle, function(state)
-    mm2Config.PlayerOutline = state
-end)
+registerToggle("Player Outline", playerOutlineToggle, function(state) mm2Config.PlayerOutline = state end)
 
 win:addButton("Grab Gun", function()
     local map = getMap()
     local gun = map and map:FindFirstChild("GunDrop")
-    
+
     if gun and rootPart then
         local oldPos = rootPart.CFrame
         win:notify("MM2", "Teleporting to gun...")
-        
+
         rootPart.CFrame = gun.CFrame
-        
-        -- Wait for gun pickup (check backpack for Tool named "Gun")
+
         local pickedUp = false
         local connection
         connection = LocalPlayer.Backpack.ChildAdded:Connect(function(item)
@@ -1574,8 +1536,7 @@ win:addButton("Grab Gun", function()
                 connection:Disconnect()
             end
         end)
-        
-        -- Fallback if not picked up in 3 seconds
+
         task.delay(3, function()
             if connection then connection:Disconnect() end
             if not pickedUp then
@@ -1583,22 +1544,20 @@ win:addButton("Grab Gun", function()
                 rootPart.CFrame = oldPos
             end
         end)
-        
-        -- If already picked up (shouldn't happen immediately but for safety)
+
         if LocalPlayer.Backpack:FindFirstChild("Gun") or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Gun")) then
             pickedUp = true
             if connection then connection:Disconnect() end
         end
 
-        -- Check every 0.1s if picked up
         task.spawn(function()
             while not pickedUp do
                 task.wait(0.1)
-                if not gun.Parent then -- Gun model disappeared from workspace
+                if not gun.Parent then
                     pickedUp = true
                 end
             end
-            task.wait(0.2) -- Small delay for stability
+            task.wait(0.2)
             rootPart.CFrame = oldPos
             win:notify("MM2", "Gun Secured! Teleported back.")
         end)
@@ -1618,12 +1577,10 @@ local spectating = false
 win:addButton("Teleport to Selected", function()
     if selectedPlayerForActions and selectedPlayerForActions.Character and selectedPlayerForActions.Character:FindFirstChild("HumanoidRootPart") then
         local targetPart = selectedPlayerForActions.Character.HumanoidRootPart
-        rootPart.CFrame = targetPart.CFrame * CFrame.new(0, 0, 3) -- TP un peu devant
-        
-        -- Anti-rollback fly
+        rootPart.CFrame = targetPart.CFrame * CFrame.new(0, 0, 3)
+
         if flying and pos then
             pos.Position = rootPart.Position
-        
         end
     else
         win:notify("Error", "No player selected or player character not found")
@@ -1735,53 +1692,44 @@ UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if UserInputService:GetFocusedTextBox() then return end
 
-    -- F = Toggle Fly
     if input.KeyCode == Enum.KeyCode.F then
         local newState = not flying
-        flyToggleObj.set(newState) -- met à jour l’UI + déclenche le callback
+        flyToggleObj.set(newState)
     end
 
-    -- G = Toggle Noclip
     if input.KeyCode == Enum.KeyCode.G then
         local newState = not noclipMode
         noclipToggleObj.set(newState)
     end
 
-    -- CapsLock = Toggle NoclipCam
     if input.KeyCode == Enum.KeyCode.CapsLock then
         local newState = not noclipCamMode
         noclipCamToggleObj.set(newState)
     end
 
-    -- T = Minimize UI
     if input.KeyCode == Enum.KeyCode.T then
         win:minimize()
     end
 
-    -- X = Toggle Invisibility
     if input.KeyCode == Enum.KeyCode.X then
         local newState = not isInvisible
         invisibleToggleObj.set(newState)
     end
 
-    -- Click TP Logic
     if clickTPEnabled and input.UserInputType == Enum.UserInputType.MouseButton1 and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
         local mouse = LocalPlayer:GetMouse()
         if mouse.Target and not mouse.Target:IsDescendantOf(character) and rootPart then
             local oldPos = rootPart.Position
             local hitPos = mouse.Hit.Position
 
-            -- Raycast pour détecter la pente et ajuster la hauteur
             local rayParam = RaycastParams.new()
             rayParam.FilterDescendantsInstances = {character}
             rayParam.FilterType = Enum.RaycastFilterType.Exclude
-            
-            -- On tire un rayon du dessus vers le point cliqué pour trouver la surface exacte
+
             local rayResult = workspace:Raycast(hitPos + Vector3.new(0, 10, 0), Vector3.new(0, -20, 0), rayParam)
-            
+
             local finalPos
             if rayResult then
-                -- On se place 3.5 studs au-dessus de l'impact pour ne pas s'enfoncer dans les pentes
                 finalPos = rayResult.Position + Vector3.new(0, 3.5, 0)
             else
                 finalPos = hitPos + Vector3.new(0, 3.5, 0)
@@ -1790,10 +1738,9 @@ UserInputService.InputBegan:Connect(function(input, processed)
             local direction = (finalPos - oldPos).Unit
 
             if (finalPos - oldPos).Magnitude > 0.1 then
-                -- On garde le personnage droit (Y constant dans lookAt) pour éviter de basculer sur les pentes
                 local lookTarget = finalPos + Vector3.new(direction.X, 0, direction.Z)
                 rootPart.CFrame = CFrame.lookAt(finalPos, lookTarget)
-                
+
                 if flying and gyro then
                     gyro.CFrame = rootPart.CFrame
                 end
