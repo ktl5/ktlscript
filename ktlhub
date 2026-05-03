@@ -422,8 +422,9 @@ local walkSpeed = 16
 local clickTPEnabled = false
 local isInvisible = false
 local originalTransparencies = {}
+local originalCanCollide = {}
+local originalCanTouch = {}
 local invisibilityConfig = {
-    TeleportHeight = -5000, -- Réduit pour éviter certains kill planes agressifs
     Transparency = 0.7
 }
 local currentFOV = 70
@@ -485,25 +486,60 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
 end)
 
 -------------------------------------------------------------------------
--- LOGIQUE INVISIBILITÉ (NUCLEARBOBO 5.0.4 LOGIC)
+-- LOGIQUE INVISIBILITÉ (SHIFTFLOCK FRIENDLY)
 -------------------------------------------------------------------------
-local function applyTransparencyLoop()
+local function applyTransparency()
     if not isInvisible or not character then return end
     
     for _, obj in pairs(character:GetDescendants()) do
-        if obj:IsA("BasePart") and obj.Name ~= "HumanoidRootPart" then
+        if obj:IsA("BasePart") then
             if originalTransparencies[obj] == nil then
                 originalTransparencies[obj] = obj.Transparency
             end
-            if obj.Transparency ~= invisibilityConfig.Transparency then
-                obj.Transparency = invisibilityConfig.Transparency
+            if originalCanCollide[obj] == nil then
+                originalCanCollide[obj] = obj.CanCollide
             end
+            if originalCanTouch[obj] == nil then
+                originalCanTouch[obj] = obj.CanTouch
+            end
+            
+            obj.Transparency = invisibilityConfig.Transparency
+            obj.CanCollide = false
+            obj.CanTouch = false
         elseif obj:IsA("Decal") then
-            if obj.Transparency ~= invisibilityConfig.Transparency then
-                obj.Transparency = invisibilityConfig.Transparency
-            end
+            obj.Transparency = invisibilityConfig.Transparency
         end
     end
+end
+
+local function restoreVisibility()
+    if not character then return end
+    
+    for obj, trans in pairs(originalTransparencies) do
+        if obj and obj.Parent then
+            obj.Transparency = trans
+        end
+    end
+    for obj, collide in pairs(originalCanCollide) do
+        if obj and obj.Parent then
+            obj.CanCollide = collide
+        end
+    end
+    for obj, touch in pairs(originalCanTouch) do
+        if obj and obj.Parent then
+            obj.CanTouch = touch
+        end
+    end
+    
+    for _, obj in pairs(character:GetDescendants()) do
+        if obj:IsA("Decal") then 
+            obj.Transparency = 0 
+        end
+    end
+    
+    originalTransparencies = {}
+    originalCanCollide = {}
+    originalCanTouch = {}
 end
 
 function toggleInvisibility(state)
@@ -511,59 +547,18 @@ function toggleInvisibility(state)
     isInvisible = state
     
     if not isInvisible then
-        -- Restauration des transparences
-        for obj, trans in pairs(originalTransparencies) do
-            if obj and obj.Parent then
-                obj.Transparency = trans
-            end
-        end
-        for _, obj in pairs(character:GetDescendants()) do
-            if obj:IsA("Decal") then obj.Transparency = 0 end
-        end
+        restoreVisibility()
         win:notify("Invisibility", "Disabled")
     else
+        applyTransparency()
         win:notify("Invisibility", "Enable")
     end
 end
 
--- Boucle de téléportation pour l'invisibilité
+-- Boucle simple pour maintenir la transparence
 RunService.Heartbeat:Connect(function()
-    if isInvisible and character and rootPart and humanoid and rootPart.Parent then
-        applyTransparencyLoop()
-
-        local oldCF = rootPart.CFrame
-        local oldOffset = humanoid.CameraOffset
-        local hiddenCF = oldCF * CFrame.new(0, invisibilityConfig.TeleportHeight, 0)
-        
-        -- Désactivation temporaire des forces du Fly pour éviter l'explosion physique
-        local oldMaxForce = nil
-        if flying and pos then
-            oldMaxForce = pos.MaxForce
-            pos.MaxForce = Vector3.new(0, 0, 0)
-        end
-        
-        rootPart.CFrame = hiddenCF
-        humanoid.CameraOffset = Vector3.new(0, -invisibilityConfig.TeleportHeight, 0)
-        
-        RunService.RenderStepped:Wait()
-        
-        if rootPart and rootPart.Parent then
-            local currentPos = rootPart.Position
-            local expectedPos = hiddenCF.Position
-            
-            -- Anti-Rollback TP: Si on a bougé de plus de 50 studs (ex: TP), on accepte la nouvelle position
-            if (currentPos - expectedPos).Magnitude > 50 then
-                oldCF = rootPart.CFrame
-            end
-            
-            rootPart.CFrame = oldCF
-            humanoid.CameraOffset = oldOffset
-            
-            -- Restauration des forces du Fly
-            if flying and pos and oldMaxForce then
-                pos.MaxForce = oldMaxForce
-            end
-        end
+    if isInvisible and character and character.Parent then
+        applyTransparency()
     end
 end)
 
@@ -622,13 +617,7 @@ function startFlying()
     pos = Instance.new("BodyPosition")
     gyro = Instance.new("BodyGyro")
 
-    -- Fix: Si on est invisible, on ne prend pas la position actuelle (qui peut être à -5000)
-    -- On calcule la position de surface correcte
     local targetInitialPos = rootPart.Position
-    if isInvisible then
-        targetInitialPos = targetInitialPos + Vector3.new(0, -invisibilityConfig.TeleportHeight, 0)
-    end
-
     pos.Position = targetInitialPos + Vector3.new(0, 3, 0)
     pos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
     pos.P = 55000
@@ -945,18 +934,84 @@ local visualsTab = win:addTab("Visuals")
 local mm2Tab = win:addTab("MM2")
 local playersTab = win:addTab("Players")
 local toolsTab = win:addTab("Tools")
+local teleportTab = win:addTab("Téléportation")
 local optionsTab = win:addTab("Options")
 local settingsTab = win:addTab("Settings")
 local discordTab = win:addTab("Discord")
 win:switchTab(optionsTab)
 
--- REJOIN SAME SERVER
+-- Teleportation Tab: ONLY Base Admin
+win:switchTab(teleportTab)
+win:addButton("Base Admin", function()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-95.94432067871094, 2607.455810546875, 375704.28125))
+        win:notify("Téléportation", "Téléporté à Base Admin !")
+    else
+        win:notify("Erreur", "Personnage non trouvé !")
+    end
+end)
+win:addButton("Spawn", function()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-119.7421875, 6.00154447555542, -34.67190933227539))
+        win:notify("Téléportation", "Téléporté au Spawn !")
+    else
+        win:notify("Erreur", "Personnage non trouvé !")
+    end
+end)
+win:addButton("777", function()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-538.2301635742188, 5.5033745765686039, -228.88345336914063))
+        win:notify("Téléportation", "Téléporté au 777 !")
+    else
+        win:notify("Erreur", "Personnage non trouvé !")
+    end
+end)
+win:addButton("Grotte", function()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-476.6964111328125, -49.3349609375, 278.12640380859377))
+        win:notify("Téléportation", "Téléporté à la Grotte !")
+    else
+        win:notify("Erreur", "Personnage non trouvé !")
+    end
+end)
+win:addButton("VIP", function()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-50.4561653137207, 1987.226318359375, -25.684471130371095))
+        win:notify("Téléportation", "Téléporté au VIP !")
+    else
+        win:notify("Erreur", "Personnage non trouvé !")
+    end
+end)
+win:addButton("Tour", function()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(178.7261505126953, 291.9255065917969, -262.8555908203125))
+        win:notify("Téléportation", "Téléporté à la Tour !")
+    else
+        win:notify("Erreur", "Personnage non trouvé !")
+    end
+end)
+win:addButton("FootBall", function()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-340.9020080566406, 5.064405918121338, -108.07209014892578))
+        win:notify("Téléportation", "Téléporté au FootBall !")
+    else
+        win:notify("Erreur", "Personnage non trouvé !")
+    end
+end)
+
+-- Options Tab: Rejoin Buttons
+win:switchTab(optionsTab)
 win:addButton("Rejoin server", function()
     local ts = game:GetService("TeleportService")
     ts:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
 end)
-
--- REJOIN RANDOM SERVER
 win:addButton("Rejoin Random Server", function()
     local ts = game:GetService("TeleportService")
     local placeId = game.PlaceId
@@ -1651,11 +1706,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
         if mouse.Target and not mouse.Target:IsDescendantOf(character) and rootPart then
             local oldPos = rootPart.Position
             local hitPos = mouse.Hit.Position
-            
-            -- Correction si on est invisible (si le clic touche le clone sous la map)
-            if isInvisible and hitPos.Y < invisibilityConfig.TeleportHeight + 500 then
-                hitPos = hitPos + Vector3.new(0, -invisibilityConfig.TeleportHeight, 0)
-            end
 
             -- Raycast pour détecter la pente et ajuster la hauteur
             local rayParam = RaycastParams.new()
@@ -1685,11 +1735,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
                 end
             else
                 rootPart.CFrame = CFrame.new(finalPos)
-            end
-            
-            -- Update surface position if invisible
-            if isInvisible then
-                invisibilityConfig.SurfaceCF = rootPart.CFrame
             end
         end
     end
