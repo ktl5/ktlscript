@@ -1468,6 +1468,17 @@ win:addButton("TP to Sheriff", function()
     end
 end)
 
+-- TP LOBBY (ajouté juste après TP to Sheriff)
+win:addButton("TP Lobby", function()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(13.597160339355469, 504.5201110839844, -43.47221374511719))
+        win:notify("MM2", "Téléporté au Lobby !")
+    else
+        win:notify("Erreur", "Personnage non trouvé !")
+    end
+end)
+
 local droppedGunToggle = win:addToggle("Dropped Gun ESP", false, function(state)
     updatePresetToggle("Dropped Gun ESP", state)
     mm2Config.DroppedGunESP = state
