@@ -935,78 +935,75 @@ local playersTab = win:addTab("Players")
 local toolsTab = win:addTab("Tools")
 local teleportTab = win:addTab("Téléportation")
 local skinPresetTab = win:addTab("Skin preset")
+local animFeTab = win:addTab("Animation FE")
 local optionsTab = win:addTab("Options")
 local settingsTab = win:addTab("Settings")
 local discordTab = win:addTab("Discord")
-win:switchTab(optionsTab)
+
+-- Déplacer l'onglet actif vers "Main" par défaut
+win:switchTab(mainTab)
 
 -- Skin preset Tab
 win:switchTab(skinPresetTab)
 win:addButton("E-boy R6", function()
-    local args =
-        {
-            buffer.fromstring("\005\000"),
-            {
-                4779442739404590
-            }
-        }
+    local args = {
+        buffer.fromstring("\005\000"),
+        { 4779442739404590 }
+    }
     game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
     win:notify("Skin preset", "E-boy R6 activé !")
 end)
+
 win:addButton("E-Girl", function()
-    local args =
-        {
-            buffer.fromstring("\005\000"),
-            {
-                6129514896723672
-            }
-        }
+    local args = {
+        buffer.fromstring("\005\000"),
+        { 6129514896723672 }
+    }
     game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
     win:notify("Skin preset", "E-Girl activé !")
 end)
+
 win:addButton("Riche", function()
-    local args =
-        {
-            buffer.fromstring("\005\000"),
-            {
-                4715780617305003
-            }
-        }
+    local args = {
+        buffer.fromstring("\005\000"),
+        { 4715780617305003 }
+    }
     game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
     win:notify("Skin preset", "Riche activé !")
 end)
+
 win:addButton("Riche Girl", function()
-    local args =
-        {
-            buffer.fromstring("\005\000"),
-            {
-                2387695079661020
-            }
-        }
+    local args = {
+        buffer.fromstring("\005\000"),
+        { 2387695079661020 }
+    }
     game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
     win:notify("Skin preset", "Riche Girl activé !")
 end)
+
 win:addButton("Baller Korblox", function()
-    local args =
-        {
-            buffer.fromstring("\005\000"),
-            {
-                6275739128577701
-            }
-        }
+    local args = {
+        buffer.fromstring("\005\000"),
+        { 6275739128577701 }
+    }
     game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
     win:notify("Skin preset", "Baller Korblox activé !")
 end)
+
 win:addButton("AgePlayer", function()
-    local args =
-        {
-            buffer.fromstring("\005\000"),
-            {
-                5407542600028116
-            }
-        }
+    local args = {
+        buffer.fromstring("\005\000"),
+        { 5407542600028116 }
+    }
     game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
     win:notify("Skin preset", "AgePlayer activé !")
+end)
+
+-- Animation FE Tab
+win:switchTab(animFeTab)
+win:addSection("Animation UI")
+win:addButton("Animation UI", function()
+    loadstring(game:HttpGet("https://pastebin.com/raw/NDqJrUr8"))()
 end)
 
 -- Teleportation Tab
@@ -1020,6 +1017,7 @@ win:addButton("Base Admin", function()
         win:notify("Erreur", "Personnage non trouvé !")
     end
 end)
+
 win:addButton("Spawn", function()
     local character = LocalPlayer.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
@@ -1029,6 +1027,7 @@ win:addButton("Spawn", function()
         win:notify("Erreur", "Personnage non trouvé !")
     end
 end)
+
 win:addButton("777", function()
     local character = LocalPlayer.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
@@ -1038,6 +1037,7 @@ win:addButton("777", function()
         win:notify("Erreur", "Personnage non trouvé !")
     end
 end)
+
 win:addButton("Grotte", function()
     local character = LocalPlayer.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
@@ -1047,6 +1047,7 @@ win:addButton("Grotte", function()
         win:notify("Erreur", "Personnage non trouvé !")
     end
 end)
+
 win:addButton("VIP", function()
     local character = LocalPlayer.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
@@ -1056,6 +1057,7 @@ win:addButton("VIP", function()
         win:notify("Erreur", "Personnage non trouvé !")
     end
 end)
+
 win:addButton("Tour", function()
     local character = LocalPlayer.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
@@ -1065,6 +1067,7 @@ win:addButton("Tour", function()
         win:notify("Erreur", "Personnage non trouvé !")
     end
 end)
+
 win:addButton("FootBall", function()
     local character = LocalPlayer.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
@@ -1081,6 +1084,7 @@ win:addButton("Rejoin server", function()
     local ts = game:GetService("TeleportService")
     ts:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
 end)
+
 win:addButton("Rejoin Random Server", function()
     local ts = game:GetService("TeleportService")
     local placeId = game.PlaceId
@@ -1468,7 +1472,7 @@ win:addButton("TP to Sheriff", function()
     end
 end)
 
--- TP LOBBY (ajouté juste après TP to Sheriff)
+-- TP LOBBY
 win:addButton("TP Lobby", function()
     local character = LocalPlayer.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
@@ -1696,6 +1700,7 @@ win:addButton("Load Global Config", function()
     win:notify("Config", "Configuration globale chargée !")
 end)
 
+-- Retour à l'onglet Main par défaut
 win:switchTab(mainTab)
 
 -- Keybinds rapides
