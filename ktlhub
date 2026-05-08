@@ -948,7 +948,7 @@ win:switchTab(skinPresetTab)
 win:addButton("E-boy R6", function()
     local args = {
         buffer.fromstring("\005\000"),
-        { 4779442739404590 }
+        { 5080125428695846 }
     }
     game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
     win:notify("Skin preset", "E-boy R6 activé !")
