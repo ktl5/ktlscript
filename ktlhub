@@ -439,6 +439,7 @@ local originalRootC0 = nil
 local lastPosition = nil
 local isRespawning = false
 local savedRespawnPosition = nil
+local autoRespawnTPEnabled = true
 
 -- SYSTÈME DE FOV FORCÉE
 RunService.RenderStepped:Connect(function()
@@ -464,6 +465,25 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
     rootPart = newChar:WaitForChild("HumanoidRootPart")
 
     humanoid.WalkSpeed = walkSpeed
+
+    -- Téléporte automatiquement à la dernière position après tout reset (Roblox officiel ou bouton)
+    if autoRespawnTPEnabled and lastPosition and not isRespawning then
+        -- Attendre que le personnage soit prêt puis téléporter
+        task.defer(function()
+            if rootPart and rootPart.Parent then
+                rootPart.CFrame = lastPosition
+                -- Réappliquer plusieurs fois pour être sûr
+                task.wait()
+                if rootPart and rootPart.Parent then
+                    rootPart.CFrame = lastPosition
+                end
+                task.wait(0.1)
+                if rootPart and rootPart.Parent then
+                    rootPart.CFrame = lastPosition
+                end
+            end
+        end)
+    end
 
     if flying then
         pos, gyro = nil, nil
@@ -1090,6 +1110,12 @@ end)
 
 -- Options Tab
 win:switchTab(optionsTab)
+local autoRespawnTPToggle = win:addToggle("Auto TP After Respawn", autoRespawnTPEnabled, function(state)
+    autoRespawnTPEnabled = state
+    updatePresetToggle("Auto TP After Respawn", state)
+end)
+registerToggle("Auto TP After Respawn", autoRespawnTPToggle, function(state) autoRespawnTPEnabled = state end)
+
 win:addButton("Rejoin server", function()
     local ts = game:GetService("TeleportService")
     ts:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
@@ -1145,77 +1171,7 @@ win:addButton("Rejoin Random Server", function()
     end
 end)
 
-win:addButton("Respawn", function()
-    if not lastPosition then
-        win:notify("Erreur", "Aucune position sauvegardée !")
-        return
-    end
-    
-    -- Sauvegarde la position DEFINITIVEMENT
-    local finalPos = lastPosition
-    isRespawning = true
-    
-    win:notify("Respawn", "Respawn en cours...")
-    
-    -- Fonction pour intercepter le nouveau personnage
-    local characterAddedConnection
-    
-    characterAddedConnection = LocalPlayer.CharacterAdded:Connect(function(newChar)
-        -- Déconnecte immédiatement pour ne pas l'appeler plusieurs fois
-        characterAddedConnection:Disconnect()
-        
-        -- Attend le HumanoidRootPart DÈS QUE POSSIBLE
-        local newRoot = newChar:WaitForChild("HumanoidRootPart", 10)
-        if not newRoot then return end
-        
-        -- Met à jour les références
-        character = newChar
-        humanoid = newChar:WaitForChild("Humanoid")
-        rootPart = newRoot
-        
-        -- TÉLÉPORTE DIRECTEMENT, SANS ATTENDRE !
-        newRoot.CFrame = finalPos
-        
-        -- Réapplique plusieurs fois pour être SUR que ça marche
-        task.defer(function()
-            if newRoot and newRoot.Parent then
-                newRoot.CFrame = finalPos
-            end
-            task.wait()
-            if newRoot and newRoot.Parent then
-                newRoot.CFrame = finalPos
-            end
-            task.wait(0.1)
-            if newRoot and newRoot.Parent then
-                newRoot.CFrame = finalPos
-            end
-        end)
-        
-        isRespawning = false
-        win:notify("Respawn", "Respawn réussi !")
-    end)
-    
-    -- Lance le respawn
-    local success, err = pcall(function()
-        LocalPlayer:LoadCharacter()
-    end)
-    
-    -- Si LoadCharacter échoue, on tue le personnage
-    if not success then
-        if character and humanoid then
-            humanoid.Health = 0
-        end
-    end
-    
-    -- Si le respawn ne fonctionne pas au bout de 5 secondes, annule
-    task.delay(5, function()
-        if characterAddedConnection and characterAddedConnection.Connected then
-            characterAddedConnection:Disconnect()
-            isRespawning = false
-            win:notify("Erreur", "Respawn échoué !")
-        end
-    end)
-end)
+
 
 -- ANTI FLING
 local antiFlingEnabled = false
