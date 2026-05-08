@@ -1020,6 +1020,25 @@ win:addButton("Baller Korblox", function()
     win:notify("Skin preset", "Baller Korblox activé !")
 end)
 
+win:addButton("Baller Originel", function()
+    local args = {
+        buffer.fromstring("\005\000"),
+        { 4636029129378492 }
+    }
+    game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
+    win:notify("Skin preset", "Baller Originel activé !")
+end)
+
+win:addButton("Baller Vert", function()
+    local args = {
+        buffer.fromstring("\005\000"),
+        { 5742533646892952 }
+    }
+    game:GetService("ReplicatedStorage"):WaitForChild("BLINK_RELIABLE_REMOTE"):FireServer(unpack(args))
+    win:notify("Skin preset", "Baller Vert activé !")
+end)
+
+
 win:addButton("AgePlayer", function()
     local args = {
         buffer.fromstring("\005\000"),
