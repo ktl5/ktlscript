@@ -969,6 +969,7 @@ local animFeTab = win:addTab("Animation FE")
 local optionsTab = win:addTab("Options")
 local settingsTab = win:addTab("Settings")
 local discordTab = win:addTab("Discord")
+local fflagsTab = win:addTab("Antilag")
 
 -- Déplacer l'onglet actif vers "Main" par défaut
 win:switchTab(mainTab)
@@ -1724,6 +1725,48 @@ win:addButton("Copy Discord Link", function()
         win:notify("Discord", "Lien copié dans le presse-papiers !")
     else
         win:notify("Error", "Votre exploit ne supporte pas le presse-papiers")
+    end
+end)
+
+-- Onglet FFlags
+win:switchTab(fflagsTab)
+
+win:addButton("No Texture", function()
+    local success, err = pcall(function()
+        local Terrain = workspace:FindFirstChildWhichIsA("Terrain") 
+        local Lighting = game:GetService("Lighting")
+        Terrain.WaterWaveSize = 0 
+        Terrain.WaterWaveSpeed = 0 
+        Terrain.WaterReflectance = 0 
+        Terrain.WaterTransparency = 1 
+        Lighting.GlobalShadows = false 
+        Lighting.FogEnd = 9e9 
+        Lighting.FogStart = 9e9 
+        settings().Rendering.QualityLevel = 1 
+        for _, v in pairs(game:GetDescendants()) do 
+            if v:IsA("BasePart") then 
+                v.CastShadow = false 
+                v.Material = "Plastic" 
+                v.Reflectance = 0 
+                v.BackSurface = "SmoothNoOutlines" 
+                v.BottomSurface = "SmoothNoOutlines" 
+                v.FrontSurface = "SmoothNoOutlines" 
+                v.LeftSurface = "SmoothNoOutlines" 
+                v.RightSurface = "SmoothNoOutlines" 
+                v.TopSurface = "SmoothNoOutlines" 
+            elseif v:IsA("Decal") then 
+                v.Transparency = 1 
+                v.Texture = "" 
+            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then 
+                v.Lifetime = NumberRange.new(0) 
+            end 
+        end
+    end)
+    
+    if success then
+        win:notify("AntiLag", "Logique AntiLag appliquée avec succès !")
+    else
+        win:notify("Erreur", "Erreur lors de l'application de l'AntiLag.")
     end
 end)
 
