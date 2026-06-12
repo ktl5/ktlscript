@@ -1,3 +1,5 @@
+--CEST UN PROJET NON FONCTIONNEL by ktl5
+
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
